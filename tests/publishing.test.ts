@@ -12,8 +12,8 @@ import {
   restoreChange,
   syncPage,
   verifyChange,
-  listCatalog,
 } from "../app/services/catalog.server";
+import { catalogOverview } from "../app/services/geo.server";
 
 async function fixture() {
   const shop = `${randomUUID()}.myshopify.com`;
@@ -56,19 +56,20 @@ test("catalog lists exclude large descriptions and source facts while retaining 
     const draft = await createDraft(f.shop, f.row.id, f.adapter, {
       use: "Hiking",
     });
-    let list = await listCatalog(f.shop);
+    let list = (await catalogOverview(f.shop)).products;
     assert.equal(list[0].draft, draft.id);
-    assert.equal(list[0].audit.score, 40);
+    // No category and an automatic checklist: the general profile applies.
+    assert.deepEqual(list[0].specs, { found: 2, total: 4, conflicts: 0 });
     assert.ok(!("descriptionHtml" in list[0]));
     assert.ok(!("metafields" in list[0]));
-    assert.ok(!("facts" in list[0].audit));
+    assert.ok(!("facts" in list[0].specs));
     assert.ok(
-      JSON.stringify(list).length < 1000,
+      JSON.stringify(list).length < 2000,
       "A list row must not carry full descriptions or snapshots",
     );
     f.edit("<p>Changed product description</p>");
     await syncPage(f.shop, f.adapter, true);
-    list = await listCatalog(f.shop);
+    list = (await catalogOverview(f.shop)).products;
     assert.equal(
       list[0].draft,
       null,

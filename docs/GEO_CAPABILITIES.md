@@ -1,47 +1,58 @@
-# Soodo GEO: product readiness release
+# Soodo GEO: capabilities
 
-Implemented October 16, 2026. This release adds product readiness checks and prioritized fixes to the existing merchant-approved description workflow.
+Updated October 16, 2026. This release adds live page checks, commerce and identity data, category-based checklists, a catalog-wide fix plan, store-wide signals and a redesigned interface. The merchant-approved description workflow is unchanged.
 
-## Available now
+## Data collected
 
-- **GEO checks** navigation: search imported products, include active/all products, review prioritized findings, and paginate large lists.
-- Ten checks: product status, reported Online Store URL, description text, specification conflicts, specifications explicitly present in the description, vendor, product type, featured image, image alternative text, and search-preview content.
-- Per-product evidence, priority, and a concrete next action. Description specifications link to the existing facts/draft workflow; Shopify fields link to the product admin when an authenticated numeric product ID is available.
-- Five outdoor buyer questions use only recognized, consistent facts. Answers are distinguished as present in the description, stored only in metafields, conflicting, or missing. No answer is invented for missing/conflicting facts.
-- Older payloads without discovery metadata show **Not checked** and require a rescan. Blank custom SEO fields are not automatically treated as a failure when product title/description content is available as a fallback.
-- Passed checks are collapsed so the report opens with work that needs attention.
+| Source | Data | Scope |
+| --- | --- | --- |
+| Product query (5 per request) | Status, description, product type, vendor, Online Store URL, SEO title/description, standard category, featured image and alt text, media count, first 10 variants (SKU, first barcode, price, compare-at price, availability), variant count, metafields | `read_products` |
+| Category metafields (`shopify` namespace) | Display names of referenced metaobjects / taxonomy values, e.g. color, fabric | `read_metaobjects` |
+| Shop query | Name, contact email, primary domain | none beyond the app session |
+| Policies query | Refund, shipping, privacy and contact policies, and whether each has content | `read_legal_policies` |
+| Public storefront | Product page HTML (≤ 3 MB) and `/robots.txt` (≤ 500 KB) | none; public HTTPS only |
 
-The existing product queries now collect vendor, Online Store URL, and SEO title/description. Data is stored in the existing product payload; no database schema migration or extra access scope was added. No external AI API, theme editing, automatic metadata write, or storefront fetch was introduced. Scanning reads data; publishing still requires explicit merchant approval.
+`barcode` is deprecated in Admin API 2026-10; `barcodes(first: 1)` is used. Throttled GraphQL responses are retried up to three times using the reported cost and restore rate. If the policy scope is not granted yet, the scan continues and policy checks show **Not checked**.
 
-## What the numbers mean
+## Checks
 
-The report displays **data checks passed**, not a GEO ranking score. Priorities are application rules for sorting work, not experimentally established ranking factors. A complete checklist does not prove that a product is indexed or recommended.
+Nineteen product checks in four groups. Priorities order the work (high 3, medium 2, low 1); readiness is earned weight ÷ possible weight over checks that could run.
 
-A matching specification in the imported description is stronger evidence than an Admin metafield alone, but the actual theme can still hide or change content. A reported Online Store URL is not a successful HTTP, robots, indexing, or crawlability test. Product type is not Shopify's standard product category; vendor is not automatically a manufacturer or brand. Search-preview checks inspect available text, not the theme's actual meta tags or a search engine's chosen snippet.
+- **Visibility:** product status, Online Store page, live page indexable (HTTP 200, not password protected, no `noindex` in meta or `X-Robots-Tag`, canonical matches), search and AI crawler access, Product structured data (exactly one Product/ProductGroup block, valid JSON, price and availability match Shopify).
+- **Product identity:** Shopify standard category, brand/vendor, barcodes (GTIN/UPC/EAN), SKUs.
+- **Content:** description length, consistent specifications, specifications written in the description, category attributes, images, image alt text, search listing (fallbacks allowed; titles over 70 characters flagged).
+- **Offer & trust:** prices, availability (active products only), ratings in Shopify's standard `reviews.rating` metafield.
 
-The five specification fields remain the app's **outdoor gear checklist**. Generic metadata checks can be useful across catalogs, but category-specific checklists must be designed and tested before claiming equivalent coverage for other categories.
+Store-wide signals: storefront open, crawler policy, refund, shipping, contact and privacy policies.
 
-## Validation
+Crawlers evaluated against robots.txt (RFC 9309: most specific group, longest rule, allow on ties): Googlebot, Bingbot, OAI-SearchBot, PerplexityBot, Claude-SearchBot, Applebot, ChatGPT-User. Training crawlers (GPTBot, Google-Extended, ClaudeBot, CCBot) are reported separately and never count as a visibility failure; blocking them is the merchant's choice.
 
-- Expanded GraphQL queries validated with the Shopify AI Toolkit against Admin API 2026-10.
-- Unit/service coverage includes legacy data, private versus description facts, conflicts, publication, images, safe links, SEO fallback, and cross-store isolation.
-- Browser coverage includes active/all filters, search, evidence review, links to the facts workflow, metadata backfill after scanning, and responsive layouts.
-- Existing publishing/restoring, concurrency, authentication, demo isolation, and database-health checks remain in place.
-- The standalone Shopify UI validator has unresolved React/runtime module dependencies. Project type checking, lint, build, and browser tests provide UI validation; a successful standalone validator run is not claimed.
+## Checklists
 
-## Next releases, in order
+Profiles: outdoor (material, weight, dimensions/fit, intended use, care), apparel (material, fit, color, care), beauty (ingredients, how to use, size/volume, intended use), electronics (dimensions, weight, compatibility, power, warranty), home (material, dimensions, color, care), food (ingredients, allergens, weight, storage), general (material, dimensions, weight, intended use). **Automatic** (default for new stores) maps the Shopify category path to a profile and falls back to general. Existing stores keep the outdoor checklist until changed in Settings.
 
-1. **Technical storefront review:** verify the actual product HTML, canonical URL, noindex directives, robots rules, and rendered Product/Offer structured data. Bound network requests by authenticated store ownership, validate destinations and redirects, block private network addresses, apply time/size limits, and preserve existing theme schema. Avoid adding duplicate JSON-LD automatically.
-2. **Commerce consistency:** compare visible prices/availability, variant identifiers, and shipping/return information with authoritative store data. Support market, currency, and variant differences explicitly.
-3. **Category profiles:** replace the single outdoor checklist with merchant-visible profiles grounded in the product's actual category. Keep unknown values empty and record sources.
-4. **Measured outcomes:** connect authorized search/analytics sources and label sampled AI-mention observations by query, provider, date, and market. Separate observed traffic/conversions from inferred impact; do not claim universal AI rankings or guaranteed recommendations.
+## Live page safety
+
+Only `https:` URLs on port 443 with a domain name are fetched. DNS is resolved once; every resolved address must be public (private, loopback, link-local, CGNAT, multicast, documentation and IPv4-mapped ranges are blocked), and the connection uses the validated address, preventing DNS rebinding. Up to five redirects, each revalidated. 8-second timeout, size limits, no credentials or cookies. Batches of four pages run in parallel; robots.txt is fetched once per origin per batch; pages checked in the last 10 minutes are skipped. Nothing in the store is changed.
+
+## What the numbers do not mean
+
+Readiness is not a ranking and a full score does not guarantee indexing, recommendations or AI mentions. Priorities follow public guidance (crawlable pages, accurate structured data matching visible content, complete product attributes, clear facts); they are not experimentally measured ranking factors. A reported crawler permission is what robots.txt says, not proof of crawling. The demo simulates storefront pages locally.
+
+## Not yet built
+
+1. **Write-back for Shopify fields** (SEO title/description, image alt text, category attributes) through the same draft → approve → verify → restore flow.
+2. **Commerce consistency across markets:** presentment currencies, market-specific prices and shipping/return details per market.
+3. **Measured outcomes:** Search Console and referral traffic from AI assistants, labeled by source and date. No universal AI ranking claims.
+4. **Scheduled scans and live checks** on a durable job queue, with change notifications.
 
 ## Primary guidance
 
-- [Google: AI features and your website](https://developers.google.com/search/docs/appearance/ai-features): foundational SEO, accessible textual content, and structured data that matches visible content remain relevant; there is no special markup requirement for AI features.
-- [Google: product structured data](https://developers.google.com/search/docs/appearance/structured-data/product): product information can support shopping/search features, with specific requirements and limitations.
-- [Shopify: Product API reference](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/Product) and [SEO fields](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/SEO).
+- [Google: AI features and your website](https://developers.google.com/search/docs/appearance/ai-features)
+- [Google: product structured data](https://developers.google.com/search/docs/appearance/structured-data/product)
+- [RFC 9309: Robots Exclusion Protocol](https://www.rfc-editor.org/rfc/rfc9309)
+- [Shopify Admin API 2026-10: Product](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/Product), [ProductVariant](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/ProductVariant), [TaxonomyCategory](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/TaxonomyCategory), [ShopPolicy](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/ShopPolicy)
 
 ## Deployment
 
-Changes need a normal app rebuild/deploy. Rescan existing stores afterwards to populate discovery metadata. Live Shopify installation, actual granted permissions, and storefront rendering still need testing with a development store. The earlier findings in `SECURITY_REVIEW.md` remain separate release-hardening work; this feature does not silently change permissions or GitHub automation.
+Run the PostgreSQL migration `20261016120000_geo_signals` (applied automatically by `npm run docker-start`), deploy the app configuration so merchants are asked for the new read scopes, then rescan stores to collect category, variant and policy data. Live Shopify installation, real storefront responses and throttling under load still need testing on a development store.

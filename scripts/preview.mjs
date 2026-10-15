@@ -6,9 +6,10 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1080 }, de
 const errors = [];
 page.on("pageerror", error => errors.push(error.message));
 await page.goto("http://127.0.0.1:3000/app");
-await page.getByRole("heading", { name: "A clearer catalog. A better discovery." }).waitFor();
+await page.getByRole("heading", { name: "Overview", exact: true }).waitFor();
 await page.screenshot({ path: "artifacts/overview.png", fullPage: true });
-await page.getByRole("link", { name: /Summit Shell Jacket/ }).click();
+await page.goto("http://127.0.0.1:3000/app/products");
+await page.getByRole("link", { name: /Summit Shell Jacket/ }).first().click();
 await page.getByRole("heading", { name: "Summit Shell Jacket", exact: true }).waitFor();
 await page.screenshot({ path: "artifacts/product-review.png", fullPage: true });
 await page.setViewportSize({ width: 390, height: 844 });

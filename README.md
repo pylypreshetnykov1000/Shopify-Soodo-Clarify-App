@@ -1,6 +1,6 @@
 # Soodo GEO
 
-A Shopify embedded app that audits outdoor product specifications, creates source-based description drafts, and publishes merchant-approved changes with saved snapshots.
+A Shopify embedded app that checks what search engines and AI shopping assistants can read about each product — live page access, structured data, category, identifiers, offer data and buyer facts — and turns the gaps into a prioritized fix plan. Missing specifications are added through source-based description drafts that are published only after merchant approval, with saved snapshots.
 
 ## Run the interactive demo
 
@@ -12,21 +12,21 @@ npm run setup
 npm run dev:local
 ```
 
-Open http://127.0.0.1:3000. The demo has four sample outdoor products and uses a persistent local SQLite database. Publishing and restoring work against the local catalog; they never call Shopify. Demo access is restricted to loopback hosts and disabled in production. Demo POST requests require a matching Origin header.
+Open http://127.0.0.1:3000. The demo has four sample outdoor products, simulated live pages and store policies and uses a persistent local SQLite database. Publishing and restoring work against the local catalog; they never call Shopify. Demo access is restricted to loopback hosts and disabled in production. Demo POST requests require a matching Origin header.
 
 On Windows, stop the dev server before rerunning `npm run setup`: a running Prisma client locks its engine DLL.
 
 ## What works
 
-- Searchable product catalog with gap, draft, and completeness filters.
-- Five explicit checks: material, weight, dimensions/fit, intended use, and care.
-- Reading existing description labels and recognized product metafields, with conflict detection.
-- Draft creation from existing facts and merchant-confirmed missing values, with per-value sources.
-- Merchant approval, draft rejection, Shopify description publishing, remote verification, and snapshots.
-- Stale-source checks before publishing and current-description checks before restore.
-- Per-product operation locks and durable publishing journals. Uncertain writes block further changes.
-- Resumable catalog scans, complete metafield pagination, product invalidation webhooks, authenticated uninstall and privacy handlers.
-- Official Shopify authentication and session storage; all product/history queries are scoped to the authenticated shop.
+- **Overview:** catalog readiness, top fixes ranked by priority × products affected, and store-wide signals (storefront password, crawler access, refund/shipping/privacy/contact policies).
+- **One-click scan:** imports products in small batches with progress and pause; collects category, category attributes, variants (barcodes, SKUs, prices, availability), media, SEO fields and store policies.
+- **Live page checks:** loads the public product page and robots.txt over HTTPS (public addresses only, bounded time and size), then reports HTTP status, password protection, noindex, canonical, Product JSON-LD (duplicates, invalid blocks, price/stock mismatches with Shopify), whether published specs are visible, and access for search, assistant and training crawlers.
+- **19 product checks** in four groups (visibility, identity, content, offer & trust), each with evidence, priority and a concrete next step. Readiness weights checks by priority and ignores checks that could not run.
+- **Fix plan:** every issue grouped by type across active products, so similar fixes can be done in one pass.
+- **Specification checklists by category:** outdoor, apparel, beauty, electronics, home, food and general. Automatic per product from the Shopify category, or fixed in Settings. Facts come from explicit description labels, recognized metafields and Shopify category attributes, with conflict detection.
+- Draft creation from existing facts and merchant-confirmed missing values, with per-value sources; approval, rejection, publishing, remote verification, snapshots and restore.
+- Stale-source checks before publishing, per-product operation locks and durable publishing journals. Uncertain writes block further changes.
+- Official Shopify authentication and session storage; all queries are scoped to the authenticated shop.
 
 Draft generation uses deterministic templates. No external language model is connected, and the app does not claim to measure or guarantee AI rankings. Publishing appends a visible specifications section to the existing product description, rather than writing new metafields or changing theme code.
 
@@ -36,7 +36,7 @@ The app uses Shopify's official React Router starter and GraphQL Admin API `2026
 
 1. Create or select an app and a development store in the Shopify Dev Dashboard.
 2. Run `npm run config:link` and complete Shopify's interactive authentication to link the app.
-3. Keep the `read_products,write_products` scopes and webhook subscriptions in `shopify.app.toml`.
+3. Keep the `read_products,write_products,read_metaobjects,read_legal_policies` scopes and webhook subscriptions in `shopify.app.toml`. Existing installations are asked to approve the two new read scopes; until then, policies show as "not checked".
 4. Run `npm run dev` and install the app on the development store.
 5. Run scans until complete, create a draft, publish, inspect the actual storefront, and restore it.
 

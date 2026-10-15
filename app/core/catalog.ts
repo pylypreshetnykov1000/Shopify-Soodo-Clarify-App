@@ -1,3 +1,15 @@
+import { decodeHTML } from "entities";
+import { rulesFor, type ProfileKey, type Rule } from "./profiles";
+
+export type Variant = {
+  id: string;
+  title: string;
+  sku: string | null;
+  barcodes: string[];
+  price: string;
+  compareAtPrice: string | null;
+  availableForSale: boolean;
+};
 export type ProductData = {
   id: string;
   title: string;
@@ -6,52 +18,35 @@ export type ProductData = {
   status: string;
   updatedAt: string;
   image: { url: string; altText: string | null } | null;
-  metafields: { namespace: string; key: string; value: string; type: string }[];
+  metafields: {
+    namespace: string;
+    key: string;
+    value: string;
+    type: string;
+    /** Resolved display names for metaobject/taxonomy references. */
+    display?: string | null;
+  }[];
   discovery?: {
     vendor: string;
     onlineStoreUrl: string | null;
     seoTitle: string | null;
     seoDescription: string | null;
   };
+  /** Commerce data. Undefined on payloads imported before it was collected. */
+  commerce?: {
+    category: { id: string; name: string; fullName: string } | null;
+    variants: Variant[];
+    variantsCount: number;
+    mediaCount: number;
+  };
 };
-export const RULES = [
-  {
-    key: "material",
-    label: "Material",
-    aliases: ["material", "materials", "fabric"],
-    hint: "For example: 100% recycled nylon. Use the manufacturer's specification.",
-  },
-  {
-    key: "weight",
-    label: "Weight",
-    aliases: ["weight", "product_weight", "packed_weight"],
-    hint: "Include a unit and specify the size or variant when relevant.",
-  },
-  {
-    key: "dimensions",
-    label: "Dimensions / fit",
-    aliases: ["dimensions", "size_guide", "fit", "packed_size"],
-    hint: "Include units, or a useful fit description for apparel.",
-  },
-  {
-    key: "use",
-    label: "Intended use",
-    aliases: ["intended_use", "best_for", "use_case", "recommended_use"],
-    hint: "Describe the activity this product is designed for.",
-  },
-  {
-    key: "care",
-    label: "Care instructions",
-    aliases: ["care", "care_instructions", "care_guide"],
-    hint: "Use verified washing, cleaning, or storage instructions.",
-  },
-] as const;
 export type Fact = {
   key: string;
   label: string;
   value: string;
   source: string;
 };
+const normalizeKey = (key: string) => key.toLowerCase().replace(/-/g, "_");
 function readableField(
   field: ProductData["metafields"][number],
 ): string | null {
@@ -67,6 +62,9 @@ function readableField(
       return null;
     }
   }
+  // Category metafields reference metaobjects; use the names Shopify resolved.
+  if (/metaobject_reference$/.test(field.type) && field.display?.trim())
+    return field.display.trim().replace(/\s+/g, " ");
   // Unit-bearing and rich-text formats need explicit conversion; never publish
   // their raw JSON as a shopper-facing specification.
   return null;
@@ -80,6 +78,14 @@ export function plainText(html: string) {
       .replace(/<[^>]*>/g, " "),
   ).trim();
 }
+/** Readable text for previews: one tidy line per block element. */
+export function previewText(html: string) {
+  return plainText(html)
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n");
+}
 export function escapeHtml(value: string) {
   return value.replace(
     /[&<>"']/g,
@@ -89,26 +95,24 @@ export function escapeHtml(value: string) {
       ]!,
   );
 }
-export function audit(product: ProductData) {
+function metafieldSource(field: ProductData["metafields"][number]) {
+  return field.namespace === "shopify"
+    ? `Shopify category field: ${field.key}`
+    : `Metafield: ${field.namespace}.${field.key}`;
+}
+export function audit(product: ProductData, profile: ProfileKey = "outdoor") {
+  const rules: Rule[] = rulesFor(profile);
   const text = plainText(product.descriptionHtml);
   const facts: Fact[] = [];
   const conflicts: string[] = [];
-  for (const rule of RULES) {
+  for (const rule of rules) {
     const fields = product.metafields.filter(
-      (f) =>
-        rule.aliases.some((a) => a === f.key.toLowerCase()) && f.value.trim(),
+      (f) => rule.aliases.includes(normalizeKey(f.key)) && f.value.trim(),
     );
     const candidates: Fact[] = fields.flatMap((f) => {
       const value = readableField(f);
       return value
-        ? [
-            {
-              key: rule.key,
-              label: rule.label,
-              value,
-              source: `Metafield: ${f.namespace}.${f.key}`,
-            },
-          ]
+        ? [{ key: rule.key, label: rule.label, value, source: metafieldSource(f) }]
         : [];
     });
     const labels = [
@@ -138,10 +142,11 @@ export function audit(product: ProductData) {
     else if (candidates[0]) facts.push(candidates[0]);
   }
   return {
+    profile,
+    rules,
     facts,
     conflicts,
-    missing: RULES.filter((r) => !facts.some((f) => f.key === r.key)),
-    score: Math.round((facts.length / RULES.length) * 100),
+    missing: rules.filter((r) => !facts.some((f) => f.key === r.key)),
+    score: Math.round((facts.length / rules.length) * 100),
   };
 }
-import { decodeHTML } from "entities";

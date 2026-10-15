@@ -12,7 +12,7 @@ import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 
 import { context } from "../services/context.server";
-import { AppLink, Icon } from "../ui/common";
+import { AppLink, Icon, type IconName } from "../ui/common";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const ctx = await context(request);
@@ -25,80 +25,76 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
+const NAV: { to: string; name: string; icon: IconName }[] = [
+  { to: "/app", name: "Overview", icon: "grid" },
+  { to: "/app/products", name: "Products", icon: "box" },
+  { to: "/app/fixes", name: "Fix plan", icon: "list" },
+  { to: "/app/history", name: "Change history", icon: "history" },
+  { to: "/app/settings", name: "Settings", icon: "settings" },
+];
+
 export default function App() {
   const { apiKey, demo, shop } = useLoaderData<typeof loader>();
   const { pathname } = useLocation();
   const navigation = useNavigation();
-  const [slowNavigation, setSlowNavigation] = useState<typeof navigation>();
+  // Only page navigations show progress; quick ones never flash an indicator.
+  const pending =
+    navigation.state === "loading" && !navigation.formMethod
+      ? navigation.location.key
+      : null;
+  const [slowKey, setSlowKey] = useState<string | null>(null);
   useEffect(() => {
-    if (navigation.state === "idle") return;
-    const timer = setTimeout(() => setSlowNavigation(navigation), 180);
+    if (!pending) return;
+    const timer = setTimeout(() => setSlowKey(pending), 160);
     return () => clearTimeout(timer);
-  }, [navigation]);
-  const showLoading =
-    navigation.state !== "idle" && slowNavigation === navigation;
+  }, [pending]);
+  const slow = pending !== null && slowKey === pending;
+  const section = NAV.find((item) =>
+    item.to === "/app" ? pathname === "/app" || pathname === "/app/" : pathname.startsWith(item.to),
+  )?.to;
   const shell = (
     <div className={demo ? "app-shell" : "app-shell embedded-shell"}>
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
+      {slow && (
+        <div className="nav-progress" aria-hidden="true">
+          <span />
+        </div>
+      )}
+      <span className="navigation-status sr-only" role="status" aria-live="polite">
+        {slow ? "Loading..." : ""}
+      </span>
       <aside className="sidebar">
-        <AppLink to="/app" className="brand">
-          Soodo GEO
+        <AppLink to="/app" className="brand" label="Soodo GEO home">
+          Soodo <span className="brand-tag">GEO</span>
         </AppLink>
-        <div className="sidebar-caption">Product information</div>
         <nav aria-label="Main navigation">
-          {[
-            { to: "/app", name: "Overview", icon: "grid" as const },
-            { to: "/app/products", name: "Products", icon: "box" as const },
-            { to: "/app/geo", name: "GEO checks", icon: "search" as const },
-            {
-              to: "/app/history",
-              name: "Change history",
-              icon: "history" as const,
-            },
-            {
-              to: "/app/settings",
-              name: "Settings",
-              icon: "settings" as const,
-            },
-          ].map((item) => (
+          {NAV.map((item) => (
             <AppLink
               key={item.to}
               to={item.to}
-              current={
-                item.to === "/app"
-                  ? pathname === item.to
-                  : pathname.startsWith(item.to)
-              }
-              className={`nav-link ${(item.to === "/app" ? pathname === item.to : pathname.startsWith(item.to)) ? "selected" : ""}`}
+              current={section === item.to}
+              className={`nav-link${section === item.to ? " selected" : ""}`}
             >
-              <Icon name={item.icon} />
+              <Icon name={item.icon} size={16} />
               {item.name}
             </AppLink>
           ))}
         </nav>
+        <div className="sidebar-foot">
+          <strong>{demo ? "Trail Supply" : shop.replace(".myshopify.com", "")}</strong>
+          <span>
+            <span className="status-dot" />
+            {demo ? "Demo · changes stay local" : "Connected to Shopify"}
+          </span>
+        </div>
       </aside>
       <div className="workspace">
-        <header className="topbar">
-          <span className="workspace-label">
-            {demo ? "Trail Supply" : shop.replace(".myshopify.com", "")}
-          </span>
-          <div>
-            <span
-              className="navigation-status"
-              role="status"
-              aria-live="polite"
-            >
-              {showLoading ? "Loading..." : ""}
-            </span>
-            <span className="status-pill">
-              {demo ? "Demo · Local changes only" : "Shopify connected"}
-            </span>
-          </div>
-        </header>
         <main className="main-content" id="main-content" tabIndex={-1}>
-          <Outlet />
+          <div className="page" key={pathname}>
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
@@ -113,7 +109,7 @@ export default function App() {
           Overview
         </a>
         <a href="/app/products">Products</a>
-        <a href="/app/geo">GEO checks</a>
+        <a href="/app/fixes">Fix plan</a>
         <a href="/app/history">Change history</a>
         <a href="/app/settings">Settings</a>
       </NavMenu>

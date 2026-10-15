@@ -35,13 +35,16 @@ model Session {
 
 model Store {
   shop        String   @id
-  category    String   @default("outdoor")
+  category    String   @default("auto")
   syncCursor  String?
   syncedAt    DateTime?
   syncStarted DateTime?
   syncToken   String?
   syncLease   DateTime?
   scanRun     String?
+  scanTotal   Int?
+  profile     String?
+  profileAt   DateTime?
   products    CatalogProduct[]
 }
 
@@ -57,7 +60,9 @@ model CatalogProduct {
   deleted     Boolean  @default(false)
   lockToken   String?
   lockUntil   DateTime?
-  store       Store @relation(fields: [shop], references: [shop], onDelete: Cascade)
+  liveCheck   String?
+  liveCheckedAt DateTime?
+  store      Store @relation(fields: [shop], references: [shop], onDelete: Cascade)
   suggestions Suggestion[]
   changes     Change[]
   @@unique([shop, gid])

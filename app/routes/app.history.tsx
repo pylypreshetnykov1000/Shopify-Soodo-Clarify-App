@@ -8,8 +8,11 @@ import {
 import db from "../db.server";
 import { context } from "../services/context.server";
 import { restoreChange, verifyChange } from "../services/catalog.server";
-import { AppLink, Badge, Icon, Notice } from "../ui/common";
-import { plainText } from "../core/catalog";
+import { AppLink, Badge, formatDate, Icon, Notice, Spinner } from "../ui/common";
+import { previewText } from "../core/catalog";
+
+const UNRESOLVED = ["PUBLISHING", "UNCERTAIN", "RESTORING", "RESTORE_UNCERTAIN"];
+
 export async function loader({ request }: LoaderFunctionArgs) {
   const { shop } = await context(request);
   const changes = await db.change.findMany({
@@ -29,8 +32,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return {
     changes: changes.map(({ beforeHtml, afterHtml, ...change }) => ({
       ...change,
-      beforeText: plainText(beforeHtml),
-      afterText: plainText(afterHtml),
+      beforeText: previewText(beforeHtml),
+      afterText: previewText(afterHtml),
     })),
   };
 }
@@ -65,117 +68,109 @@ export async function action({ request }: ActionFunctionArgs) {
     };
   }
 }
+
+const tone = (status: string) =>
+  status === "PUBLISHED" || status === "RESTORED"
+    ? "success"
+    : UNRESOLVED.includes(status) || status === "CONFLICT"
+      ? "warning"
+      : "neutral";
+
 export default function History() {
   const { changes } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
-  const busy = useNavigation().state !== "idle";
+  const navigation = useNavigation();
+  const busy = navigation.state !== "idle";
+  const pendingId = busy ? navigation.formData?.get("changeId") : null;
+  const attention = changes.filter((c) => UNRESOLVED.includes(c.status)).length;
   return (
     <>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">A RECORD OF EVERY CHANGE</div>
           <h1>Change history</h1>
           <p>
-            Published updates and saved descriptions. Restores are blocked when
-            newer edits conflict.
+            Every description Soodo published, with the version it replaced. Restoring is blocked if the
+            product was edited afterwards.
           </p>
         </div>
       </div>
       <Notice result={result} />
+      {attention > 0 && (
+        <Notice tone="error">
+          {attention} change{attention === 1 ? " needs" : "s need"} verification before that product can be
+          changed again.
+        </Notice>
+      )}
       {!changes.length ? (
         <section className="card empty">
-          <Icon name="history" size={36} />
+          <Icon name="history" size={26} />
           <h2>No published changes yet</h2>
-          <p>
-            Your snapshots will appear here after you publish your first draft.
-          </p>
+          <p>Approved description changes appear here, with the previous version saved for restoring.</p>
           <AppLink to="/app/products" className="button primary">
             Review products
           </AppLink>
         </section>
       ) : (
-        changes.map((change) => (
-          <section className="card history-card" key={change.id}>
-            <div className="card-heading">
-              <div>
-                <AppLink
-                  to={`/app/products/${change.product.id}`}
-                  className="text-link"
-                >
-                  <h2>{change.product.title}</h2>
-                </AppLink>
-                <p>
-                  {new Date(change.createdAt)
-                    .toISOString()
-                    .replace("T", " ")
-                    .slice(0, 16)}{" "}
-                  UTC
-                </p>
-              </div>
-              <Badge
-                tone={
-                  change.status === "PUBLISHED" || change.status === "RESTORED"
-                    ? "success"
-                    : "warning"
-                }
-              >
-                {change.status.toLowerCase().replace(/_/g, " ")}
-              </Badge>
-            </div>
-            {change.message && <div className="notice">{change.message}</div>}
-            <details>
-              <summary>View saved descriptions</summary>
-              <div className="draft-columns">
-                <div>
-                  <h3>Before</h3>
-                  <div className="description-text">
-                    {change.beforeText || "No description"}
+        <section className="card">
+          <ol className="timeline stagger">
+            {changes.map((change) => (
+              <li className="history-card" key={change.id}>
+                <time dateTime={new Date(change.createdAt).toISOString()}>{formatDate(change.createdAt)}</time>
+                <div className="history-body" style={{ minWidth: 0 }}>
+                  <AppLink to={`/app/products/${change.product.id}`} className="text-link">
+                    <h2 style={{ fontSize: 14 }}>{change.product.title}</h2>
+                  </AppLink>
+                  <div style={{ marginTop: 4 }}>
+                    <Badge tone={tone(change.status)}>{change.status.toLowerCase().replace(/_/g, " ")}</Badge>
                   </div>
+                  {change.message && <Notice tone="info">{change.message}</Notice>}
+                  <details className="disclosure">
+                    <summary>View saved descriptions</summary>
+                    <div className="draft-columns disclosure-body">
+                      <div>
+                        <h3>Before</h3>
+                        <div className="description-text">{change.beforeText || "No description"}</div>
+                      </div>
+                      <div className="proposed">
+                        <h3>Published</h3>
+                        <div className="description-text">{change.afterText}</div>
+                      </div>
+                    </div>
+                  </details>
                 </div>
-                <div>
-                  <h3>Published</h3>
-                  <div className="description-text">{change.afterText}</div>
+                <div className="history-actions">
+                  {change.status === "PUBLISHED" && (
+                    <Form method="post" className="history-actions">
+                      <input type="hidden" name="changeId" value={change.id} />
+                      <input type="hidden" name="intent" value="restore" />
+                      <label className="checkbox">
+                        <input type="checkbox" name="confirmed" value="yes" required />
+                        <span>Restore the previous version</span>
+                      </label>
+                      <button className="button compact" disabled={busy}>
+                        {pendingId === change.id && <Spinner />}
+                        Restore previous description
+                      </button>
+                    </Form>
+                  )}
+                  {UNRESOLVED.includes(change.status) && (
+                    <Form method="post">
+                      <input type="hidden" name="changeId" value={change.id} />
+                      <input type="hidden" name="intent" value="verify" />
+                      <button className="button primary compact" disabled={busy}>
+                        {pendingId === change.id && <Spinner />}
+                        Verify saved result
+                      </button>
+                    </Form>
+                  )}
                 </div>
-              </div>
-            </details>
-            {change.status === "PUBLISHED" && (
-              <Form method="post" className="restore-form">
-                <input type="hidden" name="changeId" value={change.id} />
-                <input type="hidden" name="intent" value="restore" />
-                <label className="checkbox">
-                  <input
-                    type="checkbox"
-                    name="confirmed"
-                    value="yes"
-                    required
-                  />
-                  <span>Restore the saved previous description.</span>
-                </label>
-                <button className="button secondary" disabled={busy}>
-                  Restore previous description
-                </button>
-              </Form>
-            )}
-            {[
-              "PUBLISHING",
-              "UNCERTAIN",
-              "RESTORING",
-              "RESTORE_UNCERTAIN",
-            ].includes(change.status) && (
-              <Form method="post">
-                <input type="hidden" name="changeId" value={change.id} />
-                <input type="hidden" name="intent" value="verify" />
-                <button className="button primary" disabled={busy}>
-                  Verify saved result
-                </button>
-              </Form>
-            )}
-          </section>
-        ))
+              </li>
+            ))}
+          </ol>
+        </section>
       )}
       <p className="footer-note">
-        Showing the most recent 100 operations. Snapshot content is displayed as
-        text for safe review.
+        Showing the latest 100 changes. Saved descriptions are shown as plain text for safe review.
       </p>
     </>
   );

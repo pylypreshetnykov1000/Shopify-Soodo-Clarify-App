@@ -11,15 +11,17 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export default function Landing() {
   return (
     <main className="landing">
-      <div className="brand">Soodo GEO</div>
-      <h1>Review your product information</h1>
+      <div className="brand">
+        Soodo <span className="brand-tag">GEO</span>
+      </div>
+      <h1>Get your products found by search and AI assistants</h1>
       <p>
-        Connect Shopify to check missing specifications and prepare description
-        updates.
+        Check what crawlers and shopping assistants can read about each product, then fix the gaps in order of
+        impact.
       </p>
       <Form method="post" action="/auth/login">
-        <label className="field">
-          <span>Shopify store domain</span>
+        <label>
+          Shopify store domain
           <input
             type="text"
             name="shop"
@@ -29,12 +31,12 @@ export default function Landing() {
           />
         </label>
         <button className="button primary">
-          Connect your Shopify store <Icon name="arrow" />
+          Connect your Shopify store <Icon name="arrow" size={16} />
         </button>
       </Form>
       <p className="muted">
-        You approve each update before it is published. Previous descriptions
-        are saved in Change history.
+        Scanning is read-only. Description changes are published only after you approve them, and every
+        previous version is kept.
       </p>
     </main>
   );

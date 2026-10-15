@@ -1,7 +1,14 @@
 import db from "../db.server";
-import { DEMO_SHOP, demoProducts } from "../core/demo";
-import type { ProductData } from "../core/catalog";
+import {
+  DEMO_ORIGIN,
+  DEMO_SHOP,
+  demoProducts,
+  demoRobots,
+  demoStore,
+} from "../core/demo";
+import { escapeHtml, type ProductData } from "../core/catalog";
 import type { CatalogAdapter } from "./shopify-catalog.server";
+import type { StorefrontFetcher } from "./live.server";
 
 export async function seedDemo() {
   // The demo store and its products are initialized together. Avoid five
@@ -11,7 +18,11 @@ export async function seedDemo() {
     where: { shop: DEMO_SHOP },
     create: {
       shop: DEMO_SHOP,
+      // The demo is an outdoor retailer, so it uses one fixed checklist.
+      category: "outdoor",
       syncedAt: new Date(),
+      profile: JSON.stringify(demoStore),
+      profileAt: new Date(),
       products: {
         create: demoProducts.map((product) => ({
           gid: product.id,
@@ -23,15 +34,35 @@ export async function seedDemo() {
     update: {},
   });
 }
+// Older local demo databases predate some fields; a scan fills them in.
+function withCurrentFields(product: ProductData): ProductData {
+  const source = demoProducts.find((p) => p.id === product.id);
+  return {
+    ...product,
+    image: product.image ?? source?.image ?? null,
+    metafields: [
+      ...product.metafields,
+      ...(source?.metafields.filter(
+        (f) =>
+          f.namespace !== "custom" &&
+          !product.metafields.some((m) => m.namespace === f.namespace && m.key === f.key),
+      ) ?? []),
+    ],
+    discovery: product.discovery ?? source?.discovery,
+    commerce: product.commerce ?? source?.commerce,
+  };
+}
+async function demoRow(gid: string) {
+  const record = await db.catalogProduct.findUnique({
+    where: { shop_gid: { shop: DEMO_SHOP, gid } },
+  });
+  return record && !record.deleted ? record : null;
+}
 export function demoAdapter(): CatalogAdapter {
   return {
     async read(id) {
-      const record = await db.catalogProduct.findUnique({
-        where: { shop_gid: { shop: DEMO_SHOP, gid: id } },
-      });
-      return record && !record.deleted
-        ? (JSON.parse(record.payload) as ProductData)
-        : null;
+      const record = await demoRow(id);
+      return record ? (JSON.parse(record.payload) as ProductData) : null;
     },
     async page() {
       await seedDemo();
@@ -39,17 +70,17 @@ export function demoAdapter(): CatalogAdapter {
         where: { shop: DEMO_SHOP, deleted: false },
       });
       return {
-        products: rows.map((row) => {
-          const product = JSON.parse(row.payload) as ProductData;
-          return {
-            ...product,
-            discovery:
-              product.discovery ??
-              demoProducts.find((p) => p.id === product.id)?.discovery,
-          };
-        }),
+        products: rows.map((row) =>
+          withCurrentFields(JSON.parse(row.payload) as ProductData),
+        ),
         cursor: null,
       };
+    },
+    async count() {
+      return db.catalogProduct.count({ where: { shop: DEMO_SHOP, deleted: false } });
+    },
+    async store() {
+      return demoStore;
     },
     async writeDescription(id, html) {
       const row = await db.catalogProduct.findUniqueOrThrow({
@@ -65,3 +96,49 @@ export function demoAdapter(): CatalogAdapter {
     },
   };
 }
+
+/**
+ * Renders demo product pages the way a typical Shopify theme would, from the
+ * demo catalog. No network request is made.
+ */
+export const demoFetcher: StorefrontFetcher = async (url, kind) => {
+  if (kind === "robots")
+    return { status: 200, finalUrl: url, headers: {} as Record<string, string>, body: demoRobots };
+  const rows = await db.catalogProduct.findMany({
+    where: { shop: DEMO_SHOP, deleted: false },
+    select: { payload: true },
+  });
+  const product = rows
+    .map((row) => withCurrentFields(JSON.parse(row.payload) as ProductData))
+    .find((p) => p.discovery?.onlineStoreUrl === url && p.status === "ACTIVE");
+  if (!product)
+    return { status: 404, finalUrl: url, headers: {} as Record<string, string>, body: "<h1>Page not found</h1>" };
+  const variants = product.commerce?.variants ?? [];
+  const productLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: product.title,
+    brand: { "@type": "Brand", name: product.discovery?.vendor },
+    image: product.image ? [`${DEMO_ORIGIN}/cdn/${product.id.split("/").pop()}.jpg`] : undefined,
+    offers: variants.map((v) => ({
+      "@type": "Offer",
+      sku: v.sku ?? undefined,
+      gtin: v.barcodes[0],
+      price: v.price,
+      priceCurrency: "USD",
+      availability: v.availableForSale
+        ? "https://schema.org/InStock"
+        : "https://schema.org/OutOfStock",
+    })),
+  };
+  const blocks = [JSON.stringify(productLd)];
+  // One demo product carries markup left behind by an old reviews app.
+  if (product.title === "Basecamp Two Tent")
+    blocks.push(JSON.stringify({ "@context": "https://schema.org", "@type": "Product", name: product.title }));
+  const body = `<!doctype html><html><head><title>${escapeHtml(product.title)} – Trail Supply</title>
+<link rel="canonical" href="${url}">
+${blocks.map((b) => `<script type="application/ld+json">${b.replace(/</g, "\\u003c")}</script>`).join("\n")}
+</head><body class="template-product"><main><h1>${escapeHtml(product.title)}</h1>
+<div class="product__description">${product.descriptionHtml}</div></main></body></html>`;
+  return { status: 200, finalUrl: url, headers: { "content-type": "text/html" }, body };
+};

@@ -72,6 +72,88 @@ test("adapter retrieves additional metafield pages without losing facts", async 
   assert.equal(page.products[0].discovery?.vendor, "Trail Supply");
   assert.equal(page.products[0].discovery?.onlineStoreUrl, raw.onlineStoreUrl);
 });
+test("adapter imports category, variants, barcodes and resolved category attributes", async () => {
+  const adapter = shopifyAdapter(
+    client([
+      {
+        data: {
+          product: {
+            ...raw,
+            metafields: {
+              nodes: [
+                {
+                  namespace: "shopify",
+                  key: "color-pattern",
+                  value: '["gid://shopify/Metaobject/1","gid://shopify/Metaobject/2"]',
+                  type: "list.metaobject_reference",
+                },
+              ],
+              pageInfo: { hasNextPage: false, endCursor: null },
+            },
+            category: { id: "gid://shopify/TaxonomyCategory/lb-1", name: "Backpacks", fullName: "Luggage & Bags > Backpacks" },
+            mediaCount: { count: 3 },
+            variantsCount: { count: 14 },
+            variants: {
+              nodes: [
+                { id: "v1", title: "Red", sku: "P-R", price: "50.00", compareAtPrice: null, availableForSale: true, barcodes: { nodes: [{ value: "0840123400011" }] } },
+                { id: "v2", title: "Blue", sku: null, price: "50.00", compareAtPrice: null, availableForSale: false, barcodes: { nodes: [{ value: " " }] } },
+              ],
+            },
+            categoryFields: {
+              nodes: [
+                {
+                  key: "color-pattern",
+                  reference: null,
+                  references: { nodes: [{ displayName: "Red" }, { displayName: "Blue" }] },
+                },
+              ],
+            },
+          },
+        },
+      },
+    ]),
+  );
+  const product = (await adapter.read(raw.id))!;
+  assert.equal(product.commerce?.category?.name, "Backpacks");
+  assert.equal(product.commerce?.variantsCount, 14);
+  assert.equal(product.commerce?.mediaCount, 3);
+  assert.deepEqual(product.commerce?.variants.map((v) => v.barcodes), [["0840123400011"], []]);
+  assert.equal(product.metafields[0].display, "Red, Blue");
+});
+test("adapter waits and retries when Shopify throttles a query", async () => {
+  const throttled = {
+    errors: [{ message: "Throttled", extensions: { code: "THROTTLED" } }],
+    extensions: { cost: { requestedQueryCost: 100, throttleStatus: { currentlyAvailable: 50, restoreRate: 100 } } },
+  };
+  const adapter = shopifyAdapter(client([throttled, { data: { product: null } }]));
+  assert.equal(await adapter.read(raw.id), null);
+  const exhausted = shopifyAdapter(client([throttled, throttled, throttled, throttled]));
+  await assert.rejects(exhausted.read(raw.id), /Shopify is busy/);
+});
+test("store details survive a missing policy permission", async () => {
+  const adapter = shopifyAdapter(
+    client([
+      { data: { shop: { name: "Trail", contactEmail: "", primaryDomain: { url: "https://trail.example" } } } },
+      { errors: [{ message: "Access denied for shopPolicies field." }] },
+    ]),
+  );
+  assert.deepEqual(await adapter.store!(), {
+    name: "Trail",
+    contactEmail: null,
+    primaryDomain: "https://trail.example",
+    policies: null,
+  });
+  const policies = shopifyAdapter(
+    client([
+      { data: { shop: { name: "Trail", contactEmail: "a@b.example", primaryDomain: null } } },
+      { data: { shop: { shopPolicies: [
+        { type: "REFUND_POLICY", title: "Refund", url: "https://trail.example/policies/refund-policy", body: "<p>30 days</p>" },
+        { type: "SHIPPING_POLICY", title: "Shipping", url: "https://trail.example/policies/shipping-policy", body: "<p> </p>" },
+      ] } } },
+    ]),
+  );
+  assert.deepEqual((await policies.store!())?.policies?.map((p) => p.filled), [true, false]);
+});
 test("adapter distinguishes explicit mutation rejection from ambiguous failures", async () => {
   const rejected = shopifyAdapter(
     client([

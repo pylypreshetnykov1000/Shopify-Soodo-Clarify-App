@@ -33,12 +33,14 @@ export default function Auth() {
 
   return (
     <main className="landing">
-      <div className="brand">Soodo GEO</div>
+      <div className="brand">
+        Soodo <span className="brand-tag">GEO</span>
+      </div>
       <h1>Connect your store</h1>
       <p>Enter your Shopify store domain to continue.</p>
       <Form method="post">
-        <label className="field">
-          <span>Shopify store domain</span>
+        <label>
+          Shopify store domain
           <input
             type="text"
             name="shop"

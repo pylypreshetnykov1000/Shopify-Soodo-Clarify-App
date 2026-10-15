@@ -1,117 +1,175 @@
-import type { LoaderFunctionArgs } from "react-router";
-import { useLoaderData } from "react-router";
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { Form, useActionData, useLoaderData, useNavigation } from "react-router";
+import db from "../db.server";
 import { context } from "../services/context.server";
-import { RULES } from "../core/catalog";
-import { AppLink, Badge } from "../ui/common";
+import { ensureStore } from "../services/catalog.server";
+import { seedDemo } from "../services/demo.server";
+import {
+  isProfileSetting,
+  PROFILE_KEYS,
+  PROFILES,
+  rulesFor,
+} from "../core/profiles";
+import { AppLink, Badge, Notice, Spinner } from "../ui/common";
+
 export async function loader({ request }: LoaderFunctionArgs) {
   const { shop, demo } = await context(request);
-  return { shop, demo };
+  if (demo) await seedDemo();
+  const store = await ensureStore(shop);
+  return { shop, demo, setting: store.category };
 }
+export async function action({ request }: ActionFunctionArgs) {
+  const { shop } = await context(request);
+  const form = await request.formData();
+  const setting = form.get("profile");
+  if (!isProfileSetting(setting))
+    return { ok: false, message: "Choose a checklist." };
+  await ensureStore(shop);
+  await db.store.update({ where: { shop }, data: { category: setting } });
+  return {
+    ok: true,
+    message:
+      setting === "auto"
+        ? "Saved. Each product now uses the checklist for its Shopify category."
+        : `Saved. Every product now uses the ${PROFILES[setting].label.toLowerCase()} checklist.`,
+  };
+}
+
 export default function Settings() {
-  const { shop, demo } = useLoaderData<typeof loader>();
+  const { shop, demo, setting } = useLoaderData<typeof loader>();
+  const result = useActionData<typeof action>();
+  const saving = useNavigation().state === "submitting";
   return (
     <>
       <div className="page-heading">
         <div>
           <h1>Settings</h1>
-          <p>Store connection and product checklist.</p>
+          <p>Checklist, permissions and how changes are published.</p>
         </div>
       </div>
-      <div className="settings-sections">
-        <section className="settings-row">
-          <div>
-            <h2>Store</h2>
-            <p>The store this workspace uses.</p>
-          </div>
-          <div className="card padded">
-            <div className="connection-heading">
-              <strong>{demo ? "Trail Supply" : shop}</strong>
-              <Badge tone={demo ? "neutral" : "success"}>
-                {demo ? "Local demo" : "Connected"}
-              </Badge>
+      <Notice result={result} />
+      <section className="settings-row" aria-labelledby="checklist-heading">
+        <div>
+          <h2 id="checklist-heading">Specification checklist</h2>
+          <p>
+            Which buyer facts each product should state. Automatic picks a checklist from the product’s
+            Shopify category, and uses General when no category matches.
+          </p>
+        </div>
+        <Form method="post" className="card card-body">
+          <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+            <legend className="sr-only">Checklist</legend>
+            <div className="choice-list">
+              <label className="choice" htmlFor="profile-auto" aria-label="Automatic">
+                <input id="profile-auto" type="radio" name="profile" value="auto" defaultChecked={setting === "auto"} />
+                <span>
+                  <strong>Automatic</strong> <Badge tone="success">Recommended</Badge>
+                  <small>Chosen per product from its Shopify category.</small>
+                </span>
+              </label>
+              {PROFILE_KEYS.map((key) => (
+                <label className="choice" key={key} htmlFor={`profile-${key}`} aria-label={PROFILES[key].label}>
+                  <input id={`profile-${key}`} type="radio" name="profile" value={key} defaultChecked={setting === key} />
+                  <span>
+                    <strong>{PROFILES[key].label}</strong>
+                    <small>{rulesFor(key).map((r) => r.label).join(" · ")}</small>
+                  </span>
+                </label>
+              ))}
             </div>
-            <p>
-              {demo
-                ? "Changes are saved on this computer. No Shopify store is updated."
-                : "The app reads product information and updates approved descriptions. Manage granted permissions in Shopify."}
-            </p>
+          </fieldset>
+          <div style={{ marginTop: 14 }}>
+            <button className="button primary" disabled={saving} aria-busy={saving}>
+              {saving && <Spinner />}
+              Save checklist
+            </button>
           </div>
-        </section>
-        <section className="settings-row">
-          <div>
-            <h2>Publishing</h2>
-            <p>How description changes are applied.</p>
-          </div>
-          <div className="card padded">
-            <dl className="setting-list">
-              <div>
-                <dt>Approval</dt>
-                <dd>Required for every description update</dd>
-              </div>
-              <div>
-                <dt>Original content</dt>
-                <dd>Kept when specifications are added</dd>
-              </div>
-              <div>
-                <dt>Recovery</dt>
-                <dd>
-                  Previous descriptions saved in{" "}
-                  <AppLink to="/app/history" className="text-link">
-                    Change history
-                  </AppLink>
-                </dd>
-              </div>
-            </dl>
-          </div>
-        </section>
-        <section className="settings-row">
-          <div>
-            <h2>Outdoor gear checklist</h2>
-            <p>Five details, each worth 20% of the completeness score.</p>
-          </div>
-          <div className="card padded">
-            <p className="settings-intro">
-              Values are read from explicit description labels and supported
-              metafields. Unknown details stay empty.
-            </p>
-            {RULES.map((rule) => (
-              <div className="rule" key={rule.key}>
-                <strong>{rule.label}</strong>
-                <small>{rule.hint}</small>
-              </div>
-            ))}
-            <details className="help-details">
-              <summary>How missing and conflicting details are handled</summary>
-              <p>
-                A missing field may exist in unlabelled product text. Add an
-                explicit, verified value to include it in the checklist.
-                Conflicting source values must be corrected in Shopify before
-                creating a draft.
-              </p>
-            </details>
-          </div>
-        </section>
-        <section className="settings-row">
-          <div>
-            <h2>Catalog scans</h2>
-            <p>Keeping your workspace up to date.</p>
-          </div>
-          <div className="card padded">
-            <p>
-              Select Scan catalog after updating products in Shopify. Large
-              catalogs import in batches; Continue scan resumes the next batch.
-            </p>
-            <p>
-              Products are checked again before drafting, publishing, or
-              restoring. If a publish result is unclear,{" "}
-              <AppLink to="/app/history" className="text-link">
-                Change history
-              </AppLink>{" "}
-              shows the operation to verify.
-            </p>
-          </div>
-        </section>
-      </div>
+        </Form>
+      </section>
+      <section className="settings-row" aria-labelledby="store-heading">
+        <div>
+          <h2 id="store-heading">Store and permissions</h2>
+          <p>Soodo asks only for what the checks need.</p>
+        </div>
+        <div className="card card-body">
+          <dl className="definition">
+            <div>
+              <dt>Store</dt>
+              <dd>
+                {demo ? "Trail Supply (local demo)" : shop}{" "}
+                <Badge tone={demo ? "neutral" : "success"}>{demo ? "Demo" : "Connected"}</Badge>
+              </dd>
+            </div>
+            <div>
+              <dt>Products</dt>
+              <dd>Read products, variants and categories. Write descriptions you approve.</dd>
+            </div>
+            <div>
+              <dt>Category values</dt>
+              <dd>Read category attribute values such as color and material (metaobjects).</dd>
+            </div>
+            <div>
+              <dt>Store policies</dt>
+              <dd>Read refund, shipping, privacy and contact policies.</dd>
+            </div>
+            <div>
+              <dt>Live pages</dt>
+              <dd>
+                Loads public product pages and robots.txt over HTTPS only, the same way a crawler would.
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+      <section className="settings-row" aria-labelledby="publishing-heading">
+        <div>
+          <h2 id="publishing-heading">Publishing</h2>
+          <p>How description changes reach your store.</p>
+        </div>
+        <div className="card card-body">
+          <dl className="definition">
+            <div>
+              <dt>Approval</dt>
+              <dd>Required for every description change.</dd>
+            </div>
+            <div>
+              <dt>Your content</dt>
+              <dd>Kept. Specifications are added as one list at the end of the description.</dd>
+            </div>
+            <div>
+              <dt>Safety checks</dt>
+              <dd>
+                The product is read again before publishing; if it changed, the draft is stopped. Every write is
+                verified afterwards.
+              </dd>
+            </div>
+            <div>
+              <dt>Undo</dt>
+              <dd>
+                Restore any previous description from{" "}
+                <AppLink to="/app/history" className="text-link">
+                  Change history
+                </AppLink>
+                .
+              </dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+      <section className="settings-row" aria-labelledby="about-heading">
+        <div>
+          <h2 id="about-heading">About the checks</h2>
+          <p>What readiness means.</p>
+        </div>
+        <div className="card card-body">
+          <p style={{ fontSize: 13 }}>
+            Readiness weights each check by priority (high 3, medium 2, low 1) and counts only checks that could
+            be run. Priorities follow published guidance from Google, Shopify and AI search providers: crawlable
+            pages, accurate structured data, complete product attributes and clear facts. They are not measured
+            ranking factors, and a full score does not guarantee placement in any search or AI answer.
+          </p>
+        </div>
+      </section>
     </>
   );
 }

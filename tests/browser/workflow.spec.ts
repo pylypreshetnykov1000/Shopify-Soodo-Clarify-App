@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import db from "../../app/db.server";
 import { DEMO_SHOP } from "../../app/core/demo";
 test.beforeAll(async () => {
@@ -16,6 +16,9 @@ test.beforeEach(async ({ page }) => {
     throw error;
   });
 });
+const fits = (page: Page) =>
+  page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+
 test("merchant can search, draft, approve, publish and restore", async ({
   page,
 }) => {
@@ -23,200 +26,174 @@ test("merchant can search, draft, approve, publish and restore", async ({
   await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await page.getByRole("link", { name: "Products", exact: true }).click();
   await page.getByRole("textbox", { name: "Search products" }).fill("Summit");
-  await expect(
-    page.getByRole("link", { name: /Trail 28 Backpack/ }),
-  ).toHaveCount(0);
-  await page.getByRole("link", { name: /Summit Shell Jacket/ }).click();
+  await expect(page.getByRole("link", { name: /Trail 28 Backpack/ })).toHaveCount(0);
+  await page.getByRole("link", { name: /Summit Shell Jacket/ }).first().click();
+  await expect(page.getByRole("heading", { name: "Specifications", exact: true })).toBeVisible();
   await page.locator('input[name="dimensions"]').fill("Regular fit");
   await page.locator('input[name="use"]').fill("Day hiking");
   await page.locator('input[name="care"]').fill("Hand wash cold");
   await page.locator('input[name="confirmed"]').check();
-  await page
-    .getByRole("button", { name: /Create description draft|Replace draft/ })
-    .click();
+  await page.getByRole("button", { name: "Create description draft" }).click();
   await expect(page.locator(".notice.success")).toContainText("Draft created");
-  await expect(
-    page.getByRole("heading", { name: "Where these facts came from" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Where these facts came from" })).toBeVisible();
   await expect(page).toHaveURL(/#draft$/);
   await expect(page.locator("#draft")).toBeFocused();
-  await expect(
-    page.getByRole("heading", { name: "Review description" }),
-  ).toBeVisible();
-  await expect(page.locator(".facts-details")).not.toHaveAttribute("open");
+  await expect(page.getByRole("heading", { name: "Review description" })).toBeVisible();
   await expect(page.locator(".sources")).toHaveCount(1);
-  await page.screenshot({
-    path: "test-results/draft-review-desktop.png",
-    fullPage: true,
-  });
+  await page.screenshot({ path: "test-results/draft-review-desktop.png", fullPage: true });
   await page.locator('input[name="approved"]').check();
   await page.getByRole("button", { name: "Publish to demo catalog" }).click();
-  await expect(page.locator(".notice.success")).toContainText(
-    "published and verified",
-  );
-  await expect(
-    page.getByText("100% information completeness", { exact: false }),
-  ).toBeVisible();
+  await expect(page.locator(".notice.success")).toContainText("published and verified");
+  await expect(page.getByText("5 / 5 found", { exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Change history", exact: true }).click();
   const latest = page.locator(".history-card").first();
   await latest.locator('input[name="confirmed"]').check();
-  await latest
-    .getByRole("button", { name: "Restore previous description" })
-    .click();
-  await expect(page.locator(".notice.success")).toContainText(
-    "restored and verified",
-  );
+  await latest.getByRole("button", { name: "Restore previous description" }).click();
+  await expect(page.locator(".notice.success")).toContainText("restored and verified");
 });
+
 test("mobile navigation and settings remain usable", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/app/settings");
-  await expect(
-    page.getByRole("heading", { name: "Outdoor gear checklist" }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
+  await expect(page.getByRole("heading", { name: "Specification checklist" })).toBeVisible();
+  expect(await fits(page)).toBe(true);
   await page.getByRole("link", { name: "Overview", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Scan catalog" }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Scan catalog|Continue scan/ })).toBeVisible();
 });
-test("demo rejects mutation requests from another origin", async ({
-  request,
-}) => {
-  const response = await request.post("/app", {
-    headers: { Origin: "https://untrusted.example" },
-    form: { intent: "sync", restart: "true" },
-  });
-  // React Router may reject the request before our own origin guard executes.
-  expect([400, 403]).toContain(response.status());
+
+test("demo rejects mutation requests from another origin", async ({ request }) => {
+  for (const path of ["/app/scan", "/app/live", "/app/settings"]) {
+    const response = await request.post(path, {
+      headers: { Origin: "https://untrusted.example" },
+      form: { restart: "true", profile: "auto" },
+    });
+    // React Router may reject the request before our own origin guard executes.
+    expect([400, 403]).toContain(response.status());
+  }
 });
+
 test("draft facts survive reload, can be revised, and rejection leaves the product untouched", async ({
   page,
 }) => {
   await page.goto("/app/products");
-  await page.getByRole("link", { name: /Ridge Fleece/ }).click();
+  await page.getByRole("link", { name: /Ridge Fleece/ }).first().click();
   await page.locator('input[name="material"]').fill("Polyester");
   await page.locator('input[name="confirmed"]').check();
   await page.getByRole("button", { name: "Create description draft" }).click();
   await expect(page.locator(".notice.success")).toContainText("Draft created");
   await page.reload();
   await expect(page.locator('input[name="material"]')).toHaveValue("Polyester");
-  await page.getByText("Edit product facts", { exact: true }).click();
   await page.locator('input[name="material"]').fill("Cotton fleece");
   await page.locator('input[name="confirmed"]').check();
-  await page
-    .getByRole("button", { name: "Replace draft with these facts" })
-    .click();
+  await page.getByRole("button", { name: "Replace draft with these facts" }).click();
   await expect(page.locator(".notice.success")).toContainText("Draft created");
   await expect(page.locator(".sources")).toHaveCount(1);
   await expect(page.locator(".sources")).toContainText("Cotton fleece");
-  const id = await page
-    .locator('.draft-actions input[name="suggestionId"]')
-    .first()
-    .inputValue();
+  const id = await page.locator('.draft-actions input[name="suggestionId"]').first().inputValue();
   const blocked = await page.request.post(page.url(), {
     headers: { Origin: new URL(page.url()).origin },
     form: { intent: "publish", suggestionId: id },
   });
-  expect(await blocked.text()).toContain(
-    "Approve the proposed change before publishing",
-  );
-  expect(
-    (await db.suggestion.findUniqueOrThrow({ where: { id } })).status,
-  ).toBe("DRAFT");
+  expect(await blocked.text()).toContain("Approve the proposed change before publishing");
+  expect((await db.suggestion.findUniqueOrThrow({ where: { id } })).status).toBe("DRAFT");
   await page.getByRole("button", { name: "Reject draft" }).click();
   await expect(page.locator(".notice.success")).toContainText("Draft rejected");
   await expect(page.locator('input[name="material"]')).toHaveValue("");
-  await expect(
-    page.locator(".context-card .description-text"),
-  ).not.toContainText("Cotton fleece");
+  await expect(page.locator(".scroll-text")).not.toContainText("Cotton fleece");
 });
-test("scanning and catalog filters work without full page navigation", async ({
+
+test("one click scans the whole catalog and filters work without navigation", async ({
   page,
 }) => {
   await page.goto("/app");
-  await page.getByRole("button", { name: "Scan catalog" }).click();
-  await expect(page.locator(".notice.success")).toContainText("Scan complete");
-  await page.getByRole("button", { name: "Complete", exact: true }).click();
-  await expect(page.locator("tbody tr")).toHaveCount(1);
-  await expect(
-    page.getByRole("link", { name: /Basecamp Two Tent/ }),
-  ).toBeVisible();
+  await page.getByRole("button", { name: /Scan catalog|Continue scan/ }).click();
+  await expect(page.locator(".notice.success")).toContainText("Scan complete. 4 products up to date.");
+  await page.getByRole("link", { name: "Products", exact: true }).click();
   await page.getByRole("button", { name: "Draft ready", exact: true }).click();
   await expect(page.locator(".empty")).toContainText("No matching products");
   await page.getByRole("button", { name: "All products", exact: true }).click();
   await expect(page.locator("tbody tr")).toHaveCount(4);
+  // The tent passes every data check; its live checks have not run yet.
+  await page.getByRole("button", { name: "Needs fixes", exact: true }).click();
+  await expect(page.locator("tbody tr")).toHaveCount(3);
 });
 
 test("catalog search, reset and sorting help merchants find the next product", async ({
   page,
 }) => {
   await page.goto("/app/products");
-  await page
-    .getByRole("combobox", { name: "Sort products" })
-    .selectOption("title");
+  await page.getByRole("combobox", { name: "Sort products" }).selectOption("title");
   const names = await page.locator(".product-name strong").allTextContents();
   expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
-  await page
-    .getByRole("textbox", { name: "Search products" })
-    .fill("no matching product");
-  await expect(
-    page.getByRole("heading", { name: "No matching products" }),
-  ).toBeVisible();
+  await page.getByRole("combobox", { name: "Sort products" }).selectOption("readiness");
+  const scores = (await page.locator(".score strong").allTextContents()).map(Number);
+  expect(scores).toEqual([...scores].sort((a, b) => a - b));
+  await page.getByRole("textbox", { name: "Search products" }).fill("no matching product");
+  await expect(page.getByRole("heading", { name: "No matching products" })).toBeVisible();
   await page.getByRole("button", { name: "Clear search and filters" }).click();
   await expect(page.locator("tbody tr")).toHaveCount(4);
-  await expect(
-    page.getByRole("link", { name: "Products", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
+  await expect(page.getByRole("link", { name: "Products", exact: true })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 });
 
-test("overview and product review fit narrow screens and link to the next action", async ({
+test("live page checks surface visibility fixes in the plan and on the product", async ({
+  page,
+}) => {
+  await page.goto("/app/fixes");
+  await expect(page.getByRole("heading", { name: "Fix plan", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Check live pages" }).click();
+  await expect(page.locator(".notice.success")).toContainText("Live page checks complete");
+  // The demo tent page carries a duplicate Product block from an old app.
+  const structured = page.locator("details.fix").filter({ hasText: "Product structured data" });
+  await structured.locator("summary").click();
+  await expect(structured).toContainText("Basecamp Two Tent");
+  await expect(structured).toContainText("2 separate Product blocks");
+  await structured.getByRole("link", { name: "Open Basecamp Two Tent" }).click();
+  await expect(page.getByRole("heading", { name: "Live page" })).toBeVisible();
+  await expect(page.locator(".live-list")).toContainText("2 blocks");
+  await expect(page.getByLabel("Crawler access from robots.txt")).toContainText("OAI-SearchBot");
+  const training = page.locator("details").filter({ hasText: /Training crawlers \(1 blocked\)/ });
+  await training.locator("summary").click();
+  await expect(training.locator("li").filter({ hasText: "GPTBot" })).toContainText("Blocked");
+  await page.getByRole("button", { name: "Check again" }).click();
+  await expect(page.locator(".notice.success")).toContainText(/moment ago|Live check/);
+  await page.goto("/app");
+  await expect(page.locator(".hero")).toContainText("Live pages checked");
+  await expect(page.getByRole("heading", { name: "Store-wide signals" })).toBeVisible();
+  await expect(page.locator(".signal").filter({ hasText: "Shipping policy" })).toContainText("Not set up");
+});
+
+test("overview and product workspace fit narrow screens and link to the next fix", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/app");
-  await expect(
-    page.getByRole("heading", { name: "Overview", exact: true }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-  await page.getByRole("link", { name: "Review next product" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Product facts" }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBe(true);
-  await page.screenshot({
-    path: "test-results/product-review-mobile.png",
-    fullPage: true,
-  });
+  await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+  expect(await fits(page)).toBe(true);
+  await page.locator(".rows").getByRole("link").first().click();
+  await expect(page.locator("h1")).toBeVisible();
+  expect(await fits(page)).toBe(true);
+  await page.goto("/app/products");
+  await page.getByRole("link", { name: /Summit Shell Jacket/ }).first().click();
+  await expect(page.getByRole("heading", { name: "Checks and next steps" })).toBeVisible();
+  expect(await fits(page)).toBe(true);
+  await page.screenshot({ path: "test-results/product-workspace-mobile.png", fullPage: true });
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/app");
-  await page.screenshot({
-    path: "test-results/overview-desktop.png",
-    fullPage: true,
-  });
+  await page.screenshot({ path: "test-results/overview-desktop.png", fullPage: true });
 });
 
 test("slow form submissions show progress only on the action being performed", async ({
   page,
 }) => {
   await page.goto("/app/products");
-  await page.getByRole("link", { name: /Trail 28 Backpack/ }).click();
+  await page.getByRole("link", { name: /Trail 28 Backpack/ }).first().click();
   await page.locator('input[name="care"]').fill("Spot clean");
   await page.locator('input[name="confirmed"]').check();
   await page.getByRole("button", { name: "Create description draft" }).click();
   await expect(page.locator(".notice.success")).toContainText("Draft created");
-  await page.getByText("Edit product facts", { exact: true }).click();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;
@@ -227,23 +204,16 @@ test("slow form submissions show progress only on the action being performed", a
   });
   try {
     await page.getByRole("button", { name: "Reject draft" }).click();
-    await expect(
-      page.getByRole("button", { name: "Rejecting..." }),
-    ).toBeDisabled();
-    await expect(
-      page.getByRole("button", { name: "Publish to demo catalog" }),
-    ).toBeDisabled();
-    await expect(
-      page.getByRole("button", { name: "Replace draft with these facts" }),
-    ).toBeDisabled();
-    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+    await expect(page.getByRole("button", { name: "Rejecting..." })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Publish to demo catalog" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Replace draft with these facts" })).toBeDisabled();
   } finally {
     release();
   }
   await expect(page.locator(".notice.success")).toContainText("Draft rejected");
 });
 
-test("all workspace screens fit phone, tablet and desktop without font downloads or motion", async ({
+test("all workspace screens fit phone, tablet and desktop without font downloads, and honour reduced motion", async ({
   page,
 }) => {
   const fontRequests: string[] = [];
@@ -254,36 +224,19 @@ test("all workspace screens fit phone, tablet and desktop without font downloads
   await page.emulateMedia({ reducedMotion: "reduce" });
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const path of [
-      "/app",
-      "/app/products",
-      "/app/geo",
-      "/app/history",
-      "/app/settings",
-    ]) {
+    for (const path of ["/app", "/app/products", "/app/fixes", "/app/history", "/app/settings"]) {
       await page.goto(path);
       await expect(page.locator("h1")).toBeVisible();
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= innerWidth,
-        ),
-        `${path} at ${width}px`,
-      ).toBe(true);
-      expect(await page.evaluate(() => document.getAnimations().length)).toBe(
-        0,
-      );
+      expect(await fits(page), `${path} at ${width}px`).toBe(true);
+      expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
     }
   }
   expect(fontRequests).toEqual([]);
 });
 
-test("Overview and Products support page sizes, page boundaries and filtered results", async ({
-  page,
-}) => {
+test("Products supports page sizes, page boundaries and filtered results", async ({ page }) => {
   await page.goto("/app/products");
-  const source = await db.catalogProduct.findFirstOrThrow({
-    where: { shop: DEMO_SHOP },
-  });
+  const source = await db.catalogProduct.findFirstOrThrow({ where: { shop: DEMO_SHOP } });
   const products = Array.from({ length: 120 }, (_, index) => ({
     shop: DEMO_SHOP,
     gid: `ux-test-${index}`,
@@ -297,84 +250,51 @@ test("Overview and Products support page sizes, page boundaries and filtered res
   try {
     await db.catalogProduct.createMany({ data: products });
     const total = await db.catalogProduct.count({ where: { shop: DEMO_SHOP } });
-    for (const path of ["/app", "/app/products"]) {
-      await page.goto(path);
-      const size = page.getByRole("combobox", { name: "Products per page" });
-      const previous = page.getByRole("button", {
-        name: "Previous",
-        exact: true,
-      });
-      const next = page.getByRole("button", { name: "Next", exact: true });
-      const range = page.locator(".table-footer [role=status]");
-      await expect(size).toHaveValue("50");
-      await expect(page.locator("tbody tr")).toHaveCount(50);
+    await page.goto("/app/products");
+    const size = page.getByRole("combobox", { name: "Products per page" });
+    const previous = page.getByRole("button", { name: "Previous", exact: true });
+    const next = page.getByRole("button", { name: "Next", exact: true });
+    const range = page.locator(".card-foot [role=status]");
+    await expect(size).toHaveValue("50");
+    await expect(page.locator("tbody tr")).toHaveCount(50);
+    await expect(previous).toBeDisabled();
+    for (const count of [10, 25, 50, 100]) {
+      await size.selectOption(String(count));
+      await expect(page.locator("tbody tr")).toHaveCount(count);
+      await expect(range).toHaveText(`1–${count} of ${total} products`);
+      await next.click();
+      await expect(range).toHaveText(`${count + 1}–${Math.min(count * 2, total)} of ${total} products`);
+      await previous.click();
       await expect(previous).toBeDisabled();
-
-      for (const count of [10, 25, 50, 100]) {
-        await size.selectOption(String(count));
-        await expect(page.locator("tbody tr")).toHaveCount(count);
-        await expect(range).toHaveText(`1–${count} of ${total} products`);
-        await next.click();
-        await expect(range).toHaveText(
-          `${count + 1}–${Math.min(count * 2, total)} of ${total} products`,
-        );
-        await previous.click();
-        await expect(previous).toBeDisabled();
-      }
-
-      // Last page contains only the remaining rows; changing size resets it.
-      await next.click();
-      await expect(page.locator("tbody tr")).toHaveCount(total - 100);
-      await expect(next).toBeDisabled();
-      await size.selectOption("25");
-      await expect(previous).toBeDisabled();
-      await expect(page.locator("tbody tr")).toHaveCount(25);
-      await next.click();
-      await page
-        .getByRole("combobox", { name: "Sort products" })
-        .selectOption("title");
-      await expect(previous).toBeDisabled();
-      await next.click();
-      await page
-        .getByRole("button", { name: "Needs information", exact: true })
-        .click();
-      await expect(range).toContainText(/^1–/);
-      await page
-        .getByRole("button", { name: "All products", exact: true })
-        .click();
-      await next.click();
-
-      const search = page.getByRole("textbox", { name: "Search products" });
-      await search.fill("UX test 119");
-      await expect(page.locator("tbody tr")).toHaveCount(1);
-      await expect(range).toHaveText(`1–1 of 1 products (${total} imported)`);
-      await expect(
-        page.getByRole("navigation", { name: "Catalog pages" }),
-      ).toHaveCount(0);
-      await expect(
-        page.getByRole("link", { name: /UX test 119/ }),
-      ).toBeVisible();
-      await search.fill("no matching catalog product");
-      await expect(page.locator("tbody tr")).toHaveCount(0);
-      await expect(range).toHaveText(`0 products (${total} imported)`);
-      await expect(size).toHaveValue("25");
-      await page
-        .getByRole("button", { name: "Clear search and filters" })
-        .click();
-      await expect(previous).toBeDisabled();
-
-      await page.setViewportSize({ width: 320, height: 740 });
-      await size.selectOption("10");
-      await expect(next).toBeVisible();
-      await next.click();
-      await expect(range).toHaveText(`11–20 of ${total} products`);
-      expect(
-        await page.evaluate(
-          () => document.documentElement.scrollWidth <= innerWidth,
-        ),
-      ).toBe(true);
-      await page.setViewportSize({ width: 1280, height: 800 });
     }
+    // Last page contains only the remaining rows; changing size resets it.
+    await next.click();
+    await expect(page.locator("tbody tr")).toHaveCount(total - 100);
+    await expect(next).toBeDisabled();
+    await size.selectOption("25");
+    await expect(previous).toBeDisabled();
+    await next.click();
+    await page.getByRole("combobox", { name: "Sort products" }).selectOption("title");
+    await expect(previous).toBeDisabled();
+    await next.click();
+    await page.getByRole("button", { name: "Needs fixes", exact: true }).click();
+    await expect(range).toContainText(/^1–/);
+    await page.getByRole("button", { name: "All products", exact: true }).click();
+    const search = page.getByRole("textbox", { name: "Search products" });
+    await search.fill("UX test 119");
+    await expect(page.locator("tbody tr")).toHaveCount(1);
+    await expect(range).toHaveText(`1–1 of 1 products (${total} imported)`);
+    await expect(page.getByRole("navigation", { name: "Catalog pages" })).toHaveCount(0);
+    await search.fill("no matching catalog product");
+    await expect(page.locator("tbody tr")).toHaveCount(0);
+    await expect(range).toHaveText(`0 products (${total} imported)`);
+    await page.getByRole("button", { name: "Clear search and filters" }).click();
+    await expect(previous).toBeDisabled();
+    await page.setViewportSize({ width: 320, height: 740 });
+    await size.selectOption("10");
+    await next.click();
+    await expect(range).toHaveText(`11–20 of ${total} products`);
+    expect(await fits(page)).toBe(true);
   } finally {
     await db.catalogProduct.deleteMany({
       where: { shop: DEMO_SHOP, gid: { in: products.map((p) => p.gid) } },
@@ -382,9 +302,7 @@ test("Overview and Products support page sizes, page boundaries and filtered res
   }
 });
 
-test("delayed navigation shows a quiet status and clears it after loading", async ({
-  page,
-}) => {
+test("delayed navigation shows a quiet status and clears it after loading", async ({ page }) => {
   await page.goto("/app");
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
@@ -394,79 +312,35 @@ test("delayed navigation shows a quiet status and clears it after loading", asyn
     await gate;
     await route.continue();
   });
-  const navigation = page
-    .getByRole("link", { name: "Settings", exact: true })
-    .click();
+  const navigation = page.getByRole("link", { name: "Settings", exact: true }).click();
   try {
     await expect(page.locator(".navigation-status")).toHaveText("Loading...");
-    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+    await expect(page.locator(".nav-progress")).toHaveCount(1);
   } finally {
     release();
   }
   await navigation;
-  await expect(
-    page.getByRole("heading", { name: "Settings", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();
   await expect(page.locator(".navigation-status")).toBeEmpty();
+  await expect(page.locator(".nav-progress")).toHaveCount(0);
 });
 
-test("GEO checks prioritize imported products and distinguish stored facts from description answers", async ({
-  page,
-}) => {
-  await page.goto("/app/geo");
-  await expect(
-    page.getByRole("heading", { name: "GEO checks", exact: true }),
-  ).toBeVisible();
-  await expect(page.locator("tbody tr")).toHaveCount(3);
-  await page
-    .getByRole("combobox", { name: "Products included in GEO checks" })
-    .selectOption("all");
-  await expect(page.locator("tbody tr")).toHaveCount(4);
-  await page
-    .getByRole("textbox", { name: "Search GEO products" })
-    .fill("Summit");
-  await expect(page.locator("tbody tr")).toHaveCount(1);
-  await page
-    .getByRole("link", { name: "Summit Shell Jacket", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Checks and next steps" }),
-  ).toBeVisible();
-  const material = page.locator(".geo-check").filter({
-    has: page.getByRole("heading", { name: "What is it made from?" }),
-  });
-  await expect(material).toContainText("Stored fact only");
-  await expect(material).toContainText("100% recycled nylon");
-  const care = page.locator(".geo-check").filter({
-    has: page.getByRole("heading", { name: "How should it be cared for?" }),
-  });
-  await expect(care).toContainText("No answer is generated");
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  await page.screenshot({
-    path: "test-results/geo-product-mobile.png",
-    fullPage: true,
-  });
-  await page
-    .getByRole("link", { name: "Review product facts", exact: true })
-    .first()
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Product facts", exact: true }),
-  ).toBeVisible();
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/app/geo");
-  await page.screenshot({
-    path: "test-results/geo-overview-desktop.png",
-    fullPage: true,
-  });
+test("the checklist setting switches products between fixed and automatic profiles", async ({ page }) => {
+  await page.goto("/app/settings");
+  await page.getByRole("radio", { name: "Automatic" }).check();
+  await page.getByRole("button", { name: "Save checklist" }).click();
+  await expect(page.locator(".notice.success")).toContainText("Shopify category");
+  await page.goto("/app/products");
+  await page.getByRole("link", { name: /Ridge Fleece/ }).first().click();
+  await expect(page.locator(".meta-line")).toContainText("Apparel & accessories checklist");
+  await expect(page.locator('input[name="color"]')).toBeVisible();
+  await page.goto("/app/settings");
+  await page.getByRole("radio", { name: "Outdoor & sports gear" }).check();
+  await page.getByRole("button", { name: "Save checklist" }).click();
+  await expect(page.locator(".notice.success")).toContainText("outdoor & sports gear");
 });
 
-test("legacy GEO data is marked not checked until a catalog rescan collects it", async ({
+test("legacy data is marked not checked until a scan collects it, and old GEO links redirect", async ({
   page,
 }) => {
   const row = await db.catalogProduct.findFirstOrThrow({
@@ -474,29 +348,18 @@ test("legacy GEO data is marked not checked until a catalog rescan collects it",
   });
   const product = JSON.parse(row.payload);
   delete product.discovery;
-  await db.catalogProduct.update({
-    where: { id: row.id },
-    data: { payload: JSON.stringify(product) },
-  });
+  delete product.commerce;
+  await db.catalogProduct.update({ where: { id: row.id }, data: { payload: JSON.stringify(product) } });
   await page.goto(`/app/geo/${row.id}`);
-  await expect(
-    page.getByText(
-      "This product was imported before discovery fields were added.",
-      { exact: false },
-    ),
-  ).toBeVisible();
-  await expect(page.getByText("Not checked", { exact: true })).toHaveCount(3);
-  await page
-    .getByRole("link", { name: "Back to GEO checks", exact: false })
-    .click();
-  await page.getByRole("button", { name: "Scan catalog" }).click();
+  await expect(page).toHaveURL(new RegExp(`/app/products/${row.id}`));
+  await expect(page.getByText("imported before some checks existed", { exact: false })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Not checked" }).first()).toBeVisible();
+  await page.goto("/app/geo");
+  await expect(page).toHaveURL(/\/app\/fixes/);
+  await page.getByRole("button", { name: /Scan catalog|Continue scan/ }).click();
   await expect(page.locator(".notice.success")).toContainText("Scan complete");
-  await page
-    .getByRole("link", { name: "Summit Shell Jacket", exact: true })
-    .click();
-  await expect(page.getByText("Not checked", { exact: true })).toHaveCount(0);
-  await page.getByText("Passed data checks (7)", { exact: true }).click();
-  await expect(
-    page.getByText("Shopify vendor: Trail Supply.", { exact: true }),
-  ).toBeVisible();
+  await page.goto(`/app/products/${row.id}`);
+  await expect(page.getByText("imported before some checks existed", { exact: false })).toHaveCount(0);
+  await page.getByText(/Passed checks \(\d+\)/).click();
+  await expect(page.getByText("Vendor: Trail Supply", { exact: true })).toBeVisible();
 });

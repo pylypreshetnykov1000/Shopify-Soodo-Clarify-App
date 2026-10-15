@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import db from "../db.server";
-import { audit, type ProductData } from "../core/catalog";
+import { type ProductData } from "../core/catalog";
+import { resolveProfile } from "../core/profiles";
 import { buildDraft, fingerprint } from "./drafts.server";
 import type { CatalogAdapter } from "./shopify-catalog.server";
 import { WriteRejectedError } from "./shopify-catalog.server";
@@ -16,41 +17,8 @@ export async function ensureStore(shop: string) {
   if (existing) return existing;
   return db.store.upsert({ where: { shop }, create: { shop }, update: {} });
 }
-export async function listCatalog(shop: string) {
-  const rows = await db.catalogProduct.findMany({
-    where: { shop, deleted: false },
-    orderBy: { title: "asc" },
-    select: {
-      id: true,
-      payload: true,
-      suggestions: {
-        where: { status: "DRAFT" },
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: { id: true, fingerprint: true },
-      },
-    },
-  });
-  return rows.map((row) => {
-    const product = JSON.parse(row.payload) as ProductData;
-    const draft = row.suggestions[0];
-    const report = audit(product);
-    return {
-      title: product.title,
-      productType: product.productType,
-      status: product.status,
-      image: product.image,
-      recordId: row.id,
-      // Lists need checklist results, not description HTML, metafields or draft snapshots.
-      audit: {
-        score: report.score,
-        missing: report.missing.map(({ key, label }) => ({ key, label })),
-        conflicts: report.conflicts,
-      },
-      draft:
-        draft && draft.fingerprint === fingerprint(product) ? draft.id : null,
-    };
-  });
+export async function storeProfileSetting(shop: string) {
+  return (await db.store.findUnique({ where: { shop } }))?.category ?? "auto";
 }
 export async function syncPage(
   shop: string,
@@ -70,15 +38,25 @@ export async function syncPage(
     throw new Error("A scan is already running. Wait a moment and retry.");
   try {
     let store = await db.store.findUniqueOrThrow({ where: { shop } });
-    if (restart || !store.syncStarted || !store.scanRun)
+    if (restart || !store.syncStarted || !store.scanRun) {
+      // Store details and the product total are refreshed once per scan.
+      const [total, profile] = await Promise.all([
+        adapter.count?.() ?? null,
+        adapter.store?.() ?? null,
+      ]);
       store = await db.store.update({
         where: { shop },
         data: {
           syncCursor: null,
           syncStarted: new Date(),
           scanRun: randomUUID(),
+          scanTotal: total,
+          ...(profile
+            ? { profile: JSON.stringify(profile), profileAt: new Date() }
+            : {}),
         },
       });
+    }
     const fetchedAt = new Date();
     const page = await adapter.page(store.syncCursor);
     await db.$transaction(async (tx) => {
@@ -230,7 +208,11 @@ export async function createDraft(
   return withLock(shop, id, async (assertLease) => {
     await assertResolved(id);
     const product = await refresh(shop, id, adapter, assertLease);
-    const draft = buildDraft(product, input);
+    const profile = resolveProfile(
+      product.commerce?.category,
+      await storeProfileSetting(shop),
+    );
+    const draft = buildDraft(product, input, profile);
     await assertLease();
     return db.$transaction(async (tx) => {
       await tx.suggestion.updateMany({

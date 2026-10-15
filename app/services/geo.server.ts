@@ -1,45 +1,204 @@
 import db from "../db.server";
-import { auditGeo } from "../core/geo";
-import type { ProductData } from "../core/catalog";
+import { audit, previewText, type Fact, type ProductData } from "../core/catalog";
+import {
+  auditGeo,
+  storeSignals,
+  WEIGHT,
+  type CheckGroup,
+  type Destination,
+  type Priority,
+  type StoreProfile,
+} from "../core/geo";
+import { PROFILES, resolveProfile } from "../core/profiles";
+import type { LiveCheck } from "../core/storefront";
+import { fingerprint } from "./drafts.server";
 
-export async function listGeoProducts(shop: string) {
-  const rows = await db.catalogProduct.findMany({
-    where: { shop, deleted: false },
-    select: { id: true, payload: true },
-  });
-  return rows.map((row) => {
+const parseJson = <T>(value: string | null): T | null => {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+};
+
+export function adminProductUrl(shop: string, gid: string) {
+  const numericId = /^gid:\/\/shopify\/Product\/(\d+)$/.exec(gid)?.[1];
+  return numericId && /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shop)
+    ? `https://admin.shopify.com/store/${shop.replace(".myshopify.com", "")}/products/${numericId}`
+    : null;
+}
+
+export type FixGroup = {
+  id: string;
+  label: string;
+  group: CheckGroup;
+  priority: Priority;
+  action: string;
+  destination: Destination;
+  products: { recordId: string; title: string; evidence: string }[];
+};
+
+/** One pass over the catalog for the overview, product list and fix plan. */
+export async function catalogOverview(shop: string) {
+  const [store, rows] = await Promise.all([
+    db.store.findUnique({ where: { shop } }),
+    db.catalogProduct.findMany({
+      where: { shop, deleted: false },
+      orderBy: { title: "asc" },
+      select: {
+        id: true,
+        payload: true,
+        liveCheck: true,
+        liveCheckedAt: true,
+        suggestions: {
+          where: { status: "DRAFT" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { id: true, fingerprint: true },
+        },
+      },
+    }),
+  ]);
+  const setting = store?.category ?? "auto";
+  const groups = new Map<string, FixGroup>();
+  let latestLive: { at: Date; check: LiveCheck } | null = null;
+  const products = rows.map((row) => {
     const product = JSON.parse(row.payload) as ProductData;
-    const report = auditGeo(product);
+    const live = parseJson<LiveCheck>(row.liveCheck);
+    if (live && row.liveCheckedAt && (!latestLive || row.liveCheckedAt > latestLive.at))
+      latestLive = { at: row.liveCheckedAt, check: live };
+    const profile = resolveProfile(product.commerce?.category, setting);
+    const report = auditGeo(product, profile, live);
+    const specs = audit(product, profile);
+    const draft = row.suggestions[0];
+    const active = product.status === "ACTIVE";
+    // Inactive products are excluded from the fix plan; they are not for sale.
+    if (active)
+      for (const issue of report.issues.filter((c) => c.status === "action")) {
+        const entry = groups.get(issue.id) ?? {
+          id: issue.id,
+          label: issue.label,
+          group: issue.group,
+          priority: issue.priority,
+          action: issue.action,
+          destination: issue.destination,
+          products: [],
+        };
+        entry.products.push({ recordId: row.id, title: product.title, evidence: issue.evidence });
+        groups.set(issue.id, entry);
+      }
     return {
       recordId: row.id,
       title: product.title,
+      productType: product.productType,
+      category: product.commerce?.category?.name ?? null,
       status: product.status,
+      image: product.image,
+      profile,
+      readiness: report.readiness,
       actions: report.actions,
       unknown: report.unknown,
-      passed: report.passed,
-      total: report.checks.length,
-      topIssue: report.issues[0] ?? null,
+      top: report.issues[0]
+        ? {
+            label: report.issues[0].label,
+            priority: report.issues[0].priority,
+            status: report.issues[0].status,
+          }
+        : null,
+      specs: {
+        found: specs.facts.length,
+        total: specs.rules.length,
+        conflicts: specs.conflicts.length,
+      },
       needsRescan: report.needsRescan,
+      draft:
+        draft && draft.fingerprint === fingerprint(product) ? draft.id : null,
+      liveCheckedAt: row.liveCheckedAt?.toISOString() ?? null,
+      hasPublicUrl: !!report.publicUrl,
     };
   });
+  const activeProducts = products.filter((p) => p.status === "ACTIVE");
+  const fixPlan = [...groups.values()].sort(
+    (a, b) =>
+      WEIGHT[b.priority] * b.products.length - WEIGHT[a.priority] * a.products.length ||
+      WEIGHT[b.priority] - WEIGHT[a.priority],
+  );
+  const live = latestLive as { at: Date; check: LiveCheck } | null;
+  return {
+    store: {
+      syncedAt: store?.syncedAt?.toISOString() ?? null,
+      syncStarted: store?.syncStarted?.toISOString() ?? null,
+      scanTotal: store?.scanTotal ?? null,
+      setting,
+      name: parseJson<StoreProfile>(store?.profile ?? null)?.name ?? null,
+    },
+    products,
+    fixPlan,
+    signals: storeSignals(parseJson<StoreProfile>(store?.profile ?? null), live?.check ?? null),
+    summary: {
+      total: products.length,
+      active: activeProducts.length,
+      readiness: activeProducts.length
+        ? Math.round(activeProducts.reduce((s, p) => s + p.readiness, 0) / activeProducts.length)
+        : 0,
+      ready: activeProducts.filter((p) => !p.actions && !p.unknown).length,
+      needsWork: activeProducts.filter((p) => p.actions > 0).length,
+      drafts: products.filter((p) => p.draft).length,
+      liveChecked: activeProducts.filter((p) => p.liveCheckedAt).length,
+      liveCheckable: activeProducts.filter((p) => p.hasPublicUrl).length,
+      needsRescan: products.filter((p) => p.needsRescan).length,
+    },
+  };
 }
 
-export async function getGeoProduct(shop: string, id: string) {
-  const row = await db.catalogProduct.findFirst({
-    where: { id, shop, deleted: false },
-    select: { id: true, payload: true },
-  });
+export async function productWorkspace(shop: string, id: string) {
+  const [store, row] = await Promise.all([
+    db.store.findUnique({ where: { shop } }),
+    db.catalogProduct.findFirst({
+      where: { shop, id },
+      include: { suggestions: { orderBy: { createdAt: "desc" }, take: 1 } },
+    }),
+  ]);
   if (!row) throw new Response("Product not found", { status: 404 });
   const product = JSON.parse(row.payload) as ProductData;
-  const numericId = /^gid:\/\/shopify\/Product\/(\d+)$/.exec(product.id)?.[1];
-  const adminUrl =
-    numericId && /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(shop)
-      ? `https://${shop}/admin/products/${numericId}`
-      : null;
+  const live = parseJson<LiveCheck>(row.liveCheck);
+  const setting = store?.category ?? "auto";
+  const profile = resolveProfile(product.commerce?.category, setting);
+  const report = auditGeo(product, profile, live);
+  const specs = audit(product, profile);
+  const draft = row.suggestions[0] ?? null;
   return {
-    recordId: row.id,
-    title: product.title,
-    report: auditGeo(product),
-    adminUrl,
+    row: { id: row.id, deleted: row.deleted },
+    product: {
+      title: product.title,
+      productType: product.productType,
+      category: product.commerce?.category?.fullName ?? null,
+      status: product.status,
+      updatedAt: product.updatedAt,
+      image: product.image,
+      vendor: product.discovery?.vendor ?? null,
+      descriptionText: previewText(product.descriptionHtml),
+    },
+    profile: { key: profile, label: PROFILES[profile].label, automatic: setting === "auto" },
+    report,
+    specs: {
+      rules: specs.rules.map(({ key, label, hint }) => ({ key, label, hint })),
+      facts: specs.facts,
+      conflicts: specs.conflicts,
+      score: specs.score,
+    },
+    live,
+    draft: draft
+      ? {
+          id: draft.id,
+          status: draft.status,
+          beforeText: previewText(draft.beforeHtml),
+          afterText: previewText(draft.afterHtml),
+          facts: JSON.parse(draft.facts) as Fact[],
+          stale: draft.fingerprint !== fingerprint(product),
+        }
+      : null,
+    adminUrl: adminProductUrl(shop, product.id),
   };
 }

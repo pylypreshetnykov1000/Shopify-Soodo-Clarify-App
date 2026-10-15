@@ -1,9 +1,10 @@
 import { createHash } from "node:crypto";
 import { parseFragment, type DefaultTreeAdapterMap } from "parse5";
-import { audit, escapeHtml, RULES, type Fact, type ProductData } from "../core/catalog";
+import { audit, escapeHtml, type Fact, type ProductData } from "../core/catalog";
+import type { ProfileKey } from "../core/profiles";
 export function fingerprint(product: ProductData) {
   return createHash("sha256").update(JSON.stringify({ id: product.id, title: product.title, descriptionHtml: product.descriptionHtml, productType: product.productType, status: product.status,
-    metafields: [...product.metafields].sort((a, b) => `${a.namespace}.${a.key}`.localeCompare(`${b.namespace}.${b.key}`)) })).digest("hex");
+    metafields: [...product.metafields].map(({ namespace, key, value, type }) => ({ namespace, key, value, type })).sort((a, b) => `${a.namespace}.${a.key}`.localeCompare(`${b.namespace}.${b.key}`)) })).digest("hex");
 }
 function stripSpecifications(html: string) {
   const root = parseFragment(html, { sourceCodeLocationInfo: true });
@@ -21,10 +22,10 @@ function stripSpecifications(html: string) {
   for (const range of ranges.sort((a, b) => b.start - a.start)) html = html.slice(0, range.start) + html.slice(range.end);
   return html;
 }
-export function buildDraft(product: ProductData, input: Record<string, string>) {
-  const result = audit(product);
+export function buildDraft(product: ProductData, input: Record<string, string>, profile: ProfileKey = "outdoor") {
+  const result = audit(product, profile);
   if (result.conflicts.length) throw new Error("Conflicting specifications found. Correct the source product data in Shopify and sync again before drafting.");
-  const facts: Fact[] = RULES.flatMap(rule => {
+  const facts: Fact[] = result.rules.flatMap(rule => {
     const source = result.facts.find(f => f.key === rule.key);
     const value = (input[rule.key] ?? source?.value ?? "").trim().replace(/\s+/g, " ");
     if (source && value !== source.value) throw new Error(`${rule.label} already has a source value. Correct it in Shopify before replacing it here.`);
