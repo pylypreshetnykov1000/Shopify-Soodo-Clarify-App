@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type { HeadersFunction, LoaderFunctionArgs } from "react-router";
 import {
   Outlet,
@@ -28,8 +29,16 @@ export default function App() {
   const { apiKey, demo, shop } = useLoaderData<typeof loader>();
   const { pathname } = useLocation();
   const navigation = useNavigation();
+  const [slowNavigation, setSlowNavigation] = useState<typeof navigation>();
+  useEffect(() => {
+    if (navigation.state === "idle") return;
+    const timer = setTimeout(() => setSlowNavigation(navigation), 180);
+    return () => clearTimeout(timer);
+  }, [navigation]);
+  const showLoading =
+    navigation.state !== "idle" && slowNavigation === navigation;
   const shell = (
-    <div className="app-shell">
+    <div className={demo ? "app-shell" : "app-shell embedded-shell"}>
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
@@ -40,7 +49,7 @@ export default function App() {
           </span>
           soodo<span className="brand-dot">.</span>
         </AppLink>
-        <div className="sidebar-caption">PRODUCT CLARITY</div>
+        <div className="sidebar-caption">Product information</div>
         <nav aria-label="Main navigation">
           {[
             { to: "/app", name: "Overview", icon: "grid" as const },
@@ -83,24 +92,26 @@ export default function App() {
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <span>Catalog workspace</span>
+          <span className="workspace-label">
+            {demo ? "Trail Supply" : shop.replace(".myshopify.com", "")}
+          </span>
           <div>
-            <span className="status-pill">
-              {demo ? "DEMO MODE" : "SHOPIFY APP"}
+            <span
+              className="navigation-status"
+              role="status"
+              aria-live="polite"
+            >
+              {showLoading ? "Loading..." : ""}
             </span>
-            <span className="avatar">
-              {demo ? "TS" : shop.slice(0, 2).toUpperCase()}
+            <span className="status-pill">
+              {demo ? "Demo store" : "Shopify connected"}
             </span>
           </div>
         </header>
-        {navigation.state !== "idle" && (
-          <div className="loading-bar" role="status" aria-label="Loading" />
-        )}
         <main className="main-content" id="main-content" tabIndex={-1}>
           {demo && (
             <div className="demo-note">
-              Interactive demo · Changes are saved locally and never sent to a
-              real Shopify store.
+              Demo store. Changes stay on this computer.
             </div>
           )}
           <Outlet />

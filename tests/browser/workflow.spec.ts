@@ -20,9 +20,7 @@ test("merchant can search, draft, approve, publish and restore", async ({
   page,
 }) => {
   await page.goto("/app");
-  await expect(
-    page.getByRole("heading", { name: "Your next step to clearer products" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
   await page.getByRole("link", { name: "Products", exact: true }).click();
   await page.getByRole("textbox", { name: "Search products" }).fill("Summit");
   await expect(
@@ -43,7 +41,7 @@ test("merchant can search, draft, approve, publish and restore", async ({
   await page.getByRole("link", { name: "Review draft", exact: true }).click();
   await expect(page).toHaveURL(/#draft$/);
   await expect(
-    page.getByRole("heading", { name: "2. Review the description" }),
+    page.getByRole("heading", { name: "Review description" }),
   ).toBeVisible();
   await page.locator('input[name="approved"]').check();
   await page.getByRole("button", { name: "Publish to demo catalog" }).click();
@@ -172,15 +170,17 @@ test("overview and product review fit narrow screens and link to the next action
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/app");
-  await expect(page.getByRole("list", { name: "How it works" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Overview", exact: true }),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
-  await page.getByRole("link", { name: "Improve a product" }).click();
+  await page.getByRole("link", { name: "Review next product" }).click();
   await expect(
-    page.getByRole("heading", { name: "1. Check the product facts" }),
+    page.getByRole("heading", { name: "Product facts" }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -197,4 +197,138 @@ test("overview and product review fit narrow screens and link to the next action
     path: "test-results/overview-desktop.png",
     fullPage: true,
   });
+});
+
+test("slow form submissions show progress only on the action being performed", async ({
+  page,
+}) => {
+  await page.goto("/app/products");
+  await page.getByRole("link", { name: /Trail 28 Backpack/ }).click();
+  await page.locator('input[name="care"]').fill("Spot clean");
+  await page.locator('input[name="confirmed"]').check();
+  await page.getByRole("button", { name: "Create description draft" }).click();
+  await expect(page.locator(".notice.success")).toContainText("Draft created");
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/*.data*", async (route) => {
+    if (route.request().method() === "POST") await gate;
+    await route.continue();
+  });
+  try {
+    await page.getByRole("button", { name: "Reject draft" }).click();
+    await expect(
+      page.getByRole("button", { name: "Rejecting..." }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Publish to demo catalog" }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", { name: "Replace draft with these facts" }),
+    ).toBeDisabled();
+    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  } finally {
+    release();
+  }
+  await expect(page.locator(".notice.success")).toContainText("Draft rejected");
+});
+
+test("all workspace screens fit phone, tablet and desktop without font downloads or motion", async ({
+  page,
+}) => {
+  const fontRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/fonts\.(googleapis|gstatic)|static\/fonts/.test(request.url()))
+      fontRequests.push(request.url());
+  });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const path of [
+      "/app",
+      "/app/products",
+      "/app/history",
+      "/app/settings",
+    ]) {
+      await page.goto(path);
+      await expect(page.locator("h1")).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+        `${path} at ${width}px`,
+      ).toBe(true);
+      expect(await page.evaluate(() => document.getAnimations().length)).toBe(
+        0,
+      );
+    }
+  }
+  expect(fontRequests).toEqual([]);
+});
+
+test("large catalogs render in pages and filtering resets pagination", async ({
+  page,
+}) => {
+  await page.goto("/app/products");
+  const source = await db.catalogProduct.findFirstOrThrow({
+    where: { shop: DEMO_SHOP },
+  });
+  const products = Array.from({ length: 120 }, (_, index) => ({
+    shop: DEMO_SHOP,
+    gid: `ux-test-${index}`,
+    title: `UX test ${String(index).padStart(3, "0")}`,
+    payload: JSON.stringify({
+      ...JSON.parse(source.payload),
+      id: `ux-test-${index}`,
+      title: `UX test ${String(index).padStart(3, "0")}`,
+    }),
+  }));
+  try {
+    await db.catalogProduct.createMany({ data: products });
+    await page.reload();
+    await expect(page.locator("tbody tr")).toHaveCount(50);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await expect(page.getByText("Page 2 of 3", { exact: true })).toBeVisible();
+    await page
+      .getByRole("textbox", { name: "Search products" })
+      .fill("UX test 119");
+    await expect(page.locator("tbody tr")).toHaveCount(1);
+    await expect(
+      page.getByRole("navigation", { name: "Catalog pages" }),
+    ).toHaveCount(0);
+    await expect(page.getByRole("link", { name: /UX test 119/ })).toBeVisible();
+  } finally {
+    await db.catalogProduct.deleteMany({
+      where: { shop: DEMO_SHOP, gid: { in: products.map((p) => p.gid) } },
+    });
+  }
+});
+
+test("delayed navigation shows a quiet status and clears it after loading", async ({
+  page,
+}) => {
+  await page.goto("/app");
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/app/settings.data*", async (route) => {
+    await gate;
+    await route.continue();
+  });
+  const navigation = page
+    .getByRole("link", { name: "Settings", exact: true })
+    .click();
+  try {
+    await expect(page.locator(".navigation-status")).toHaveText("Loading...");
+    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  } finally {
+    release();
+  }
+  await navigation;
+  await expect(
+    page.getByRole("heading", { name: "Settings", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".navigation-status")).toBeEmpty();
 });

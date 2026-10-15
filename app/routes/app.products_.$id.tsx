@@ -33,11 +33,20 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   const draft = row.suggestions[0] ?? null;
   return {
     row: { id: row.id, deleted: row.deleted },
-    product,
+    product: {
+      title: product.title,
+      productType: product.productType,
+      status: product.status,
+      updatedAt: product.updatedAt,
+      descriptionText: plainText(product.descriptionHtml),
+    },
     audit: audit(product),
     draft: draft
       ? {
-          ...draft,
+          id: draft.id,
+          status: draft.status,
+          beforeText: plainText(draft.beforeHtml),
+          afterText: plainText(draft.afterHtml),
           facts: JSON.parse(draft.facts) as Fact[],
           stale: draft.fingerprint !== fingerprint(product),
         }
@@ -100,7 +109,11 @@ export async function action({ request, params }: ActionFunctionArgs) {
 export default function ProductReview() {
   const data = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
-  const busy = useNavigation().state !== "idle";
+  const navigation = useNavigation();
+  const busy =
+    navigation.state !== "idle" &&
+    navigation.formMethod?.toLowerCase() === "post";
+  const activeIntent = busy ? navigation.formData?.get("intent") : null;
   const { product, audit: report, draft } = data;
   const pending = draft?.status === "DRAFT";
   return (
@@ -110,7 +123,6 @@ export default function ProductReview() {
       </AppLink>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">PRODUCT REVIEW</div>
           <h1>{product.title}</h1>
           <p>
             {product.productType || "Uncategorized"} ·{" "}
@@ -119,15 +131,25 @@ export default function ProductReview() {
           </p>
         </div>
         <Badge tone={report.score === 100 ? "success" : "warning"}>
-          {report.missing.length} missing fields
+          {report.missing.length
+            ? `${report.missing.length} missing fields`
+            : "Checklist complete"}
         </Badge>
       </div>
       <Notice result={result} />
       {pending && (
         <div className="review-shortcut">
           <div>
-            <strong>Your draft is ready to review</strong>
-            <p>Compare descriptions and check the sources before publishing.</p>
+            <strong>
+              {draft.stale
+                ? "This draft needs updating"
+                : "Your draft is ready to review"}
+            </strong>
+            <p>
+              {draft.stale
+                ? "Product information changed. Create a fresh draft before publishing."
+                : "Compare descriptions and check the sources before publishing."}
+            </p>
           </div>
           <AppLink
             to={`/app/products/${data.row.id}#draft`}
@@ -155,7 +177,7 @@ export default function ProductReview() {
         <section className="card">
           <div className="card-heading">
             <div>
-              <h2>1. Check the product facts</h2>
+              <h2>Product facts</h2>
               <p>
                 Found facts are kept as they are. Add only specifications you
                 can verify.
@@ -164,6 +186,7 @@ export default function ProductReview() {
           </div>
           <Form
             method="post"
+            aria-busy={activeIntent === "draft"}
             className="facts-form"
             key={`${product.updatedAt}-${draft?.id ?? "none"}-${draft?.status ?? "none"}`}
           >
@@ -180,6 +203,8 @@ export default function ProductReview() {
                   </span>
                   <input
                     name={rule.key}
+                    aria-label={rule.label}
+                    disabled={busy}
                     defaultValue={
                       fact?.value ??
                       (pending
@@ -206,9 +231,8 @@ export default function ProductReview() {
               className="button primary"
               disabled={busy || data.row.deleted || !!report.conflicts.length}
             >
-              <Icon name="spark" />
-              {busy
-                ? "Working…"
+              {activeIntent === "draft"
+                ? "Creating draft..."
                 : pending
                   ? "Replace draft with these facts"
                   : "Create description draft"}
@@ -216,36 +240,9 @@ export default function ProductReview() {
           </Form>
         </section>
         <aside className="card context-card">
-          <div className="guide-icon">
-            <Icon name="leaf" size={26} />
-          </div>
-          <h2>Your product, with clearer details</h2>
-          <p>
-            A structured specifications section helps customers compare products
-            and understand what they are buying.
-          </p>
-          <ul className="check-list">
-            <li>
-              <Icon name="check" />
-              Original description preserved
-            </li>
-            <li>
-              <Icon name="check" />
-              Every value has a source
-            </li>
-            <li>
-              <Icon name="check" />
-              You approve every change
-            </li>
-            <li>
-              <Icon name="check" />A snapshot saved before publishing
-            </li>
-          </ul>
-          <hr />
           <h3>Current description</h3>
           <div className="description-text">
-            {plainText(product.descriptionHtml) ||
-              "This product has no description yet."}
+            {product.descriptionText || "This product has no description yet."}
           </div>
           <p className="muted">
             Published specifications are added to the product description. Check
@@ -254,85 +251,100 @@ export default function ProductReview() {
         </aside>
       </div>
       {draft && (
-        <section className="card draft-card" id="draft" tabIndex={-1}>
-          <div className="card-heading">
-            <div>
-              <div className="eyebrow">YOUR REVIEW COMES FIRST</div>
-              <h2>2. Review the description</h2>
-              <p>
-                {pending
-                  ? "Check the exact values below before approving."
-                  : `Draft status: ${draft.status.toLowerCase().replace(/_/g, " ")}`}
-              </p>
+        <details
+          className={`draft-details${pending ? " active" : ""}`}
+          open={pending}
+          key={`${draft.id}-${draft.status}`}
+        >
+          <summary>
+            {pending
+              ? "Description draft"
+              : `View ${draft.status.toLowerCase().replace(/_/g, " ")} draft`}
+          </summary>
+          <section className="card draft-card" id="draft" tabIndex={-1}>
+            <div className="card-heading">
+              <div>
+                <h2>Review description</h2>
+                <p>
+                  {pending
+                    ? "Check the exact values below before approving."
+                    : `Draft status: ${draft.status.toLowerCase().replace(/_/g, " ")}`}
+                </p>
+              </div>
+              <Badge tone={pending ? "warning" : "neutral"}>
+                {draft.status.toLowerCase()}
+              </Badge>
             </div>
-            <Badge tone={pending ? "warning" : "neutral"}>
-              {draft.status.toLowerCase()}
-            </Badge>
-          </div>
-          {pending && draft.stale && (
-            <div className="notice error">
-              Source product data changed. Create a fresh draft before
-              publishing.
-            </div>
-          )}
-          <div className="draft-columns">
-            <div>
-              <h3>Before</h3>
-              <div className="description-text">
-                {plainText(draft.beforeHtml) || "No description"}
+            {pending && draft.stale && (
+              <div className="notice error">
+                Source product data changed. Create a fresh draft before
+                publishing.
+              </div>
+            )}
+            <div className="draft-columns">
+              <div>
+                <h3>Before</h3>
+                <div className="description-text">
+                  {draft.beforeText || "No description"}
+                </div>
+              </div>
+              <div className="proposed">
+                <h3>After</h3>
+                <div className="description-text">{draft.afterText}</div>
               </div>
             </div>
-            <div className="proposed">
-              <h3>After</h3>
-              <div className="description-text">
-                {plainText(draft.afterHtml)}
-              </div>
+            <div className="sources">
+              <h3>Where these facts came from</h3>
+              {draft.facts.map((fact) => (
+                <div key={fact.key}>
+                  <strong>{fact.label}</strong>
+                  <span>{fact.value}</span>
+                  <small>{fact.source}</small>
+                </div>
+              ))}
             </div>
-          </div>
-          <div className="sources">
-            <h3>Where these facts came from</h3>
-            {draft.facts.map((fact) => (
-              <div key={fact.key}>
-                <strong>{fact.label}</strong>
-                <span>{fact.value}</span>
-                <small>{fact.source}</small>
+            {pending && (
+              <div className="draft-actions">
+                <Form method="post">
+                  <input type="hidden" name="intent" value="publish" />
+                  <input type="hidden" name="suggestionId" value={draft.id} />
+                  <label className="checkbox">
+                    <input
+                      type="checkbox"
+                      name="approved"
+                      value="yes"
+                      required
+                    />
+                    <span>
+                      I approve this description change. It will replace the
+                      current {data.demo ? "demo" : "Shopify"} description.
+                    </span>
+                  </label>
+                  <button
+                    className="button primary"
+                    disabled={busy || draft.stale || data.row.deleted}
+                  >
+                    {activeIntent === "publish"
+                      ? "Publishing..."
+                      : data.demo
+                        ? "Publish to demo catalog"
+                        : "Publish to Shopify"}
+                    <Icon name="arrow" />
+                  </button>
+                </Form>
+                <Form method="post">
+                  <input type="hidden" name="intent" value="reject" />
+                  <input type="hidden" name="suggestionId" value={draft.id} />
+                  <button className="button secondary" disabled={busy}>
+                    {activeIntent === "reject"
+                      ? "Rejecting..."
+                      : "Reject draft"}
+                  </button>
+                </Form>
               </div>
-            ))}
-          </div>
-          {pending && (
-            <div className="draft-actions">
-              <Form method="post">
-                <input type="hidden" name="intent" value="publish" />
-                <input type="hidden" name="suggestionId" value={draft.id} />
-                <label className="checkbox">
-                  <input type="checkbox" name="approved" value="yes" required />
-                  <span>
-                    I approve this description change. It will replace the
-                    current Shopify description.
-                  </span>
-                </label>
-                <button
-                  className="button primary"
-                  disabled={busy || draft.stale || data.row.deleted}
-                >
-                  {busy
-                    ? "Working…"
-                    : data.demo
-                      ? "Publish to demo catalog"
-                      : "Publish to Shopify"}
-                  <Icon name="arrow" />
-                </button>
-              </Form>
-              <Form method="post">
-                <input type="hidden" name="intent" value="reject" />
-                <input type="hidden" name="suggestionId" value={draft.id} />
-                <button className="button secondary" disabled={busy}>
-                  Reject draft
-                </button>
-              </Form>
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+        </details>
       )}
     </>
   );

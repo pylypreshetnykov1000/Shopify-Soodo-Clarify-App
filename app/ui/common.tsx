@@ -22,6 +22,7 @@ export function AppLink({
       to={`${path}${retained.size ? `${path.includes("?") ? "&" : "?"}${retained}` : ""}${hash ? `#${hash}` : ""}`}
       className={className}
       aria-current={current ? "page" : undefined}
+      prefetch="intent"
     >
       {children}
     </Link>

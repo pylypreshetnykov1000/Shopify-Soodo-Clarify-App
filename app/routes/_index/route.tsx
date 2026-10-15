@@ -9,5 +9,33 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return null;
 }
 export default function Landing() {
-  return <main className="landing"><div className="brand"><span className="brand-mark"><Icon name="leaf"/></span>soodo.</div><div className="eyebrow">PRODUCT CLARITY FOR SHOPIFY</div><h1>A clearer catalog.<br/>A better discovery.</h1><p>Find missing product specifications, organize verified facts, and publish descriptions you can trust.</p><Form method="post" action="/auth/login"><label className="field"><span>Shopify store domain</span><input type="text" name="shop" required placeholder="your-store.myshopify.com" autoComplete="url"/></label><button className="button primary">Connect your Shopify store <Icon name="arrow"/></button></Form><p className="muted">Manual approval for every change. Saved snapshots for every publish.</p></main>;
+  return (
+    <main className="landing">
+      <div className="brand">soodo</div>
+      <h1>Review your product information</h1>
+      <p>
+        Connect Shopify to check missing specifications and prepare description
+        updates.
+      </p>
+      <Form method="post" action="/auth/login">
+        <label className="field">
+          <span>Shopify store domain</span>
+          <input
+            type="text"
+            name="shop"
+            required
+            placeholder="your-store.myshopify.com"
+            autoComplete="url"
+          />
+        </label>
+        <button className="button primary">
+          Connect your Shopify store <Icon name="arrow" />
+        </button>
+      </Form>
+      <p className="muted">
+        You approve each update before it is published. Previous descriptions
+        are saved in Change history.
+      </p>
+    </main>
+  );
 }
