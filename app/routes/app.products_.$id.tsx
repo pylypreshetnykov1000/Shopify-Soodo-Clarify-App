@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import {
   Form,
@@ -26,11 +26,13 @@ import {
   formatDate,
   Icon,
   Mark,
+  Meter,
   Notice,
   PRIORITY_LABEL,
   Spinner,
   Thumb,
 } from "../ui/common";
+import { Collapsible, Steps, TabPanel, Tabs } from "../ui/motion";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const { shop, demo } = await context(request);
@@ -97,14 +99,19 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 type Data = Awaited<ReturnType<typeof loader>>;
+type TabId = "checks" | "specs" | "live";
 
-function LiveForm({ busy, label = "Check live page", compact }: { busy: boolean; label?: string; compact?: boolean }) {
+function LiveForm({ busy, label = "Check live page", compact, primary }: { busy: boolean; label?: string; compact?: boolean; primary?: boolean }) {
   const navigation = useNavigation();
   const running = busy && navigation.formData?.get("intent") === "live";
   return (
     <Form method="post">
       <input type="hidden" name="intent" value="live" />
-      <button className={`button${compact ? " compact" : ""}`} disabled={busy} aria-busy={running}>
+      <button
+        className={`button${compact ? " compact" : ""}${primary ? " primary" : ""}`}
+        disabled={busy}
+        aria-busy={running}
+      >
         {running ? <Spinner /> : <Icon name="globe" size={compact ? 13 : 15} />}
         {running ? "Checking..." : label}
       </button>
@@ -112,38 +119,64 @@ function LiveForm({ busy, label = "Check live page", compact }: { busy: boolean;
   );
 }
 
-function CheckRow({ check, data, busy }: { check: GeoCheck; data: Data; busy: boolean }) {
-  const kind = check.status === "pass" ? "pass" : check.status === "unknown" ? "unknown" : check.priority;
-  return (
-    <div className="check">
-      <Mark
-        kind={kind}
-        label={check.status === "pass" ? "Passed" : check.status === "unknown" ? "Not checked" : `${PRIORITY_LABEL[check.priority]} priority`}
-      />
-      <div style={{ minWidth: 0 }}>
-        <h3>{check.label}</h3>
-        <p>{check.evidence}</p>
-        {check.status !== "pass" && <p className="advice">{check.action}</p>}
-      </div>
-      {check.status !== "pass" && (
-        <div className="check-cta">
-          {check.destination === "facts" ? (
-            <a href="#specs" className="button compact">
-              Add specifications
-            </a>
-          ) : check.destination === "live" ? (
-            data.report.publicUrl && <LiveForm busy={busy} label="Check" compact />
-          ) : check.destination === "scan" ? (
-            <AppLink to="/app" className="button compact">
-              Scan
-            </AppLink>
-          ) : check.destination === "shopify" && data.adminUrl ? (
-            <ExternalLink href={data.adminUrl} className="button compact">
-              Edit
-            </ExternalLink>
-          ) : null}
+const markKind = (check: GeoCheck) =>
+  check.status === "pass" ? "pass" : check.status === "unknown" ? "unknown" : check.priority;
+const markLabel = (check: GeoCheck) =>
+  check.status === "pass"
+    ? "Passed"
+    : check.status === "unknown"
+      ? "Not checked"
+      : `${PRIORITY_LABEL[check.priority]} priority`;
+
+function CheckItem({
+  check,
+  open,
+  onToggle,
+  cta,
+}: {
+  check: GeoCheck;
+  open: boolean;
+  onToggle: () => void;
+  cta: ReactNode;
+}) {
+  if (check.status === "pass")
+    return (
+      <div className="check-item">
+        <div className="check-static">
+          <Mark kind="pass" label="Passed" />
+          <span className="check-title">
+            <strong>{check.label}</strong>
+            <small>{check.evidence}</small>
+          </span>
+          <span className="check-meta">Passed</span>
         </div>
-      )}
+      </div>
+    );
+  return (
+    <div className="check-item">
+      <button
+        type="button"
+        className="check-trigger"
+        aria-expanded={open}
+        aria-controls={`check-${check.id}`}
+        onClick={onToggle}
+      >
+        <Mark kind={markKind(check)} label={markLabel(check)} />
+        <span className="check-title">
+          <strong>{check.label}</strong>
+          <small>{check.evidence}</small>
+        </span>
+        <span className="check-meta">
+          {check.status === "unknown" ? "Not checked" : `${PRIORITY_LABEL[check.priority]} priority`}
+        </span>
+        <Icon name="chevron" size={15} />
+      </button>
+      <Collapsible open={open} id={`check-${check.id}`}>
+        <div className="check-detail">
+          <p>{check.action}</p>
+          {cta}
+        </div>
+      </Collapsible>
     </div>
   );
 }
@@ -228,74 +261,452 @@ function DraftReview({ data, busy, pending }: { data: Data; busy: boolean; pendi
   );
 }
 
+function ChecksPanel({ data, busy, goTo }: { data: Data; busy: boolean; goTo: (tab: TabId) => void }) {
+  const { report } = data;
+  const [openId, setOpenId] = useState<string | null>(report.issues[0]?.id ?? null);
+  const [showPassed, setShowPassed] = useState(false);
+  const passed = report.checks.filter((c) => c.status === "pass");
+  const groupOrder = Object.keys(GROUPS) as CheckGroup[];
+  const groups = groupOrder
+    .map((group) => ({ group, checks: report.issues.filter((c) => c.group === group) }))
+    .filter((g) => g.checks.length);
+  const cta = (check: GeoCheck) =>
+    check.destination === "facts" ? (
+      <button type="button" className="button compact primary" onClick={() => goTo("specs")}>
+        Add specifications
+      </button>
+    ) : check.destination === "live" ? (
+      data.report.publicUrl ? <LiveForm busy={busy} label="Run live check" compact /> : null
+    ) : check.destination === "scan" ? (
+      <AppLink to="/app" className="button compact">
+        Go to scan
+      </AppLink>
+    ) : check.destination === "shopify" && data.adminUrl ? (
+      <ExternalLink href={data.adminUrl} className="button compact">
+        Edit in Shopify
+      </ExternalLink>
+    ) : check.destination === "theme" ? (
+      <small>Online Store › Themes</small>
+    ) : null;
+  const areas = groupOrder.map((group) => {
+    const checks = report.checks.filter((c) => c.group === group && c.status !== "unknown");
+    const ok = checks.filter((c) => c.status === "pass").length;
+    return { group, ok, total: checks.length };
+  });
+  const live = data.live;
+  return (
+    <div className="columns">
+      <section className="card" aria-labelledby="fixes-heading">
+        <div className="card-heading">
+          <div>
+            <h2 id="fixes-heading">Checks and next steps</h2>
+            <p>
+              {report.actions} to fix · {report.passed} passed
+              {report.unknown ? ` · ${report.unknown} not checked yet` : ""}
+            </p>
+          </div>
+        </div>
+        {groups.map(({ group, checks }) => (
+          <div key={group}>
+            <div className="group-title">
+              <h3>{GROUPS[group].label}</h3>
+              <small>{GROUPS[group].summary}</small>
+            </div>
+            {checks.map((check) => (
+              <CheckItem
+                key={check.id}
+                check={check}
+                open={openId === check.id}
+                onToggle={() => setOpenId(openId === check.id ? null : check.id)}
+                cta={cta(check)}
+              />
+            ))}
+          </div>
+        ))}
+        {!report.issues.length && (
+          <div className="empty">
+            <Icon name="check" size={24} />
+            <h3>Everything checks out</h3>
+            <p>Keep facts current as the product changes.</p>
+          </div>
+        )}
+        {passed.length > 0 && (
+          <>
+            <button
+              type="button"
+              className="toggle passed-toggle"
+              aria-expanded={showPassed}
+              aria-controls="passed-checks"
+              onClick={() => setShowPassed(!showPassed)}
+            >
+              <Icon name="chevron" size={14} />
+              Passed checks ({passed.length})
+            </button>
+            <Collapsible open={showPassed} id="passed-checks">
+              <div className="passed-list">
+                {passed.map((check) => (
+                  <CheckItem key={check.id} check={check} open={false} onToggle={() => {}} cta={null} />
+                ))}
+              </div>
+            </Collapsible>
+          </>
+        )}
+      </section>
+      <aside className="stack">
+        <section className="card" aria-labelledby="areas-heading">
+          <div className="card-heading">
+            <div>
+              <h2 id="areas-heading">By area</h2>
+              <p>Checks passed, out of those that could run.</p>
+            </div>
+          </div>
+          <ul className="areas">
+            {areas.map((area) => (
+              <li key={area.group}>
+                <span>{GROUPS[area.group].label}</span>
+                <Meter
+                  value={area.total ? Math.round((area.ok / area.total) * 100) : 0}
+                  label={`${GROUPS[area.group].label} checks passed`}
+                />
+                <span>
+                  {area.ok}/{area.total}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className="card" aria-labelledby="live-summary-heading">
+          <div className="card-heading">
+            <div>
+              <h2 id="live-summary-heading">Live page</h2>
+              <p>{live ? `Checked ${formatDate(live.checkedAt)}` : "Not checked yet"}</p>
+            </div>
+          </div>
+          <div className="card-body">
+            {!data.report.publicUrl ? (
+              <p style={{ fontSize: 12.5 }}>No public Online Store page to check.</p>
+            ) : live ? (
+              <>
+                <div className="status-line">
+                  <Mark kind={live.error || live.passwordProtected || live.httpStatus !== 200 ? "high" : "pass"} />
+                  {live.error
+                    ? "Page unreachable"
+                    : live.passwordProtected
+                      ? "Password protected"
+                      : live.httpStatus === 200
+                        ? "Page reachable"
+                        : `HTTP ${live.httpStatus}`}
+                </div>
+                <div className="status-line">
+                  <Mark kind={live.crawlers.some((c) => c.purpose !== "training" && !c.allowed) ? "high" : "pass"} />
+                  {live.crawlers.some((c) => c.purpose !== "training" && !c.allowed)
+                    ? "Some crawlers blocked"
+                    : "Search and AI crawlers allowed"}
+                </div>
+                <div className="status-line">
+                  <Mark kind={live.structured?.count === 1 && live.priceMatches !== false ? "pass" : "medium"} />
+                  {live.structured ? `${live.structured.count === 1 ? "Product markup found" : `${live.structured.count} product blocks`}` : "No product markup"}
+                </div>
+                <button type="button" className="text-link" style={{ marginTop: 14 }} onClick={() => goTo("live")}>
+                  Live page details <Icon name="arrow" size={13} />
+                </button>
+              </>
+            ) : (
+              <>
+                <p style={{ fontSize: 12.5, marginBottom: 12 }}>
+                  See this page the way search engines and AI assistants do.
+                </p>
+                <LiveForm busy={busy} compact />
+              </>
+            )}
+          </div>
+        </section>
+      </aside>
+    </div>
+  );
+}
+
+function SpecsPanel({ data, busy }: { data: Data; busy: boolean }) {
+  const navigation = useNavigation();
+  const activeIntent = busy ? navigation.formData?.get("intent") : null;
+  const { pathname, search } = useLocation();
+  const { specs, draft, report, product } = data;
+  const pending = draft?.status === "DRAFT";
+  const missing = specs.rules.length - specs.facts.length;
+  return (
+    <div className="columns">
+      <div>
+        <section className="card" id="specs" aria-labelledby="specs-heading">
+          <div className="flow-head">
+            <Steps
+              label="Description update"
+              steps={[
+                {
+                  title: "Add verified facts",
+                  detail: missing ? `${missing} missing` : "Complete",
+                  state: pending ? "done" : "current",
+                },
+                { title: "Review draft", detail: pending ? "Waiting for you" : "Before publishing", state: pending ? "current" : "todo" },
+                { title: "Publish", detail: "Only after approval", state: "todo" },
+              ]}
+            />
+          </div>
+          <div className="card-heading">
+            <div>
+              <h2 id="specs-heading">Specifications</h2>
+              <p>
+                {specs.rules.length} key facts for {data.profile.label.toLowerCase()}. Add only values you have
+                verified; leave the rest empty.
+              </p>
+            </div>
+            <Badge tone={specs.score === 100 ? "success" : "neutral"}>
+              {specs.facts.length} / {specs.rules.length} found
+            </Badge>
+          </div>
+          {!!specs.conflicts.length && (
+            <div style={{ padding: "14px 20px 0" }}>
+              <Notice tone="error">
+                Conflicting values for{" "}
+                {specs.conflicts.map((key) => specs.rules.find((r) => r.key === key)?.label).join(", ")}.
+                Correct them in Shopify, then scan again.
+              </Notice>
+            </div>
+          )}
+          <Form
+            method="post"
+            action={`${pathname}${search}#draft`}
+            aria-busy={activeIntent === "draft"}
+            className="facts-form"
+            key={`${product.updatedAt}-${draft?.id ?? "none"}-${draft?.status ?? "none"}`}
+          >
+            <input type="hidden" name="intent" value="draft" />
+            {specs.rules.map((rule) => {
+              const fact = specs.facts.find((f) => f.key === rule.key);
+              return (
+                <label className="field" key={rule.key}>
+                  <span className="field-heading">
+                    {rule.label}
+                    <Badge tone={fact ? "success" : "warning"}>{fact ? "Found" : "Missing"}</Badge>
+                  </span>
+                  <input
+                    name={rule.key}
+                    aria-label={rule.label}
+                    disabled={busy}
+                    defaultValue={
+                      fact?.value ?? (pending ? draft?.facts.find((f) => f.key === rule.key)?.value : "") ?? ""
+                    }
+                    maxLength={500}
+                    readOnly={!!fact}
+                    placeholder={fact ? "" : "Add a verified value"}
+                  />
+                  <small>{fact ? fact.source : rule.hint}</small>
+                </label>
+              );
+            })}
+            <div className="form-foot">
+              <label className="checkbox">
+                <input type="checkbox" name="confirmed" value="yes" required />
+                <span>The values I add are accurate for this product.</span>
+              </label>
+              <button
+                className="button primary"
+                disabled={busy || data.row.deleted || !!specs.conflicts.length}
+                aria-busy={activeIntent === "draft"}
+              >
+                {activeIntent === "draft" && <Spinner />}
+                {activeIntent === "draft"
+                  ? "Creating draft..."
+                  : pending
+                    ? "Replace draft with these facts"
+                    : "Create description draft"}
+              </button>
+            </div>
+          </Form>
+        </section>
+
+        <section className="card" aria-labelledby="answers-heading">
+          <div className="card-heading">
+            <div>
+              <h2 id="answers-heading">Buyer questions</h2>
+              <p>What an assistant could answer from your verified facts. Nothing is guessed.</p>
+            </div>
+          </div>
+          <ul className="answers stagger">
+            {report.answers.map((answer) => (
+              <li key={answer.key}>
+                <strong>{answer.question}</strong>
+                <Badge
+                  tone={
+                    answer.status === "description"
+                      ? "success"
+                      : answer.status === "stored"
+                        ? "info"
+                        : answer.status === "conflict"
+                          ? "critical"
+                          : "warning"
+                  }
+                >
+                  {answer.status === "description"
+                    ? "In description"
+                    : answer.status === "stored"
+                      ? "Stored fact only"
+                      : answer.status === "conflict"
+                        ? "Conflicting values"
+                        : "Missing"}
+                </Badge>
+                <p className={answer.value ? "answer-value" : undefined}>
+                  {answer.value ??
+                    (answer.status === "conflict"
+                      ? "Correct the conflict before this can be answered."
+                      : "No answer is generated without a verified value.")}
+                </p>
+                {answer.status === "stored" && (
+                  <p>
+                    {answer.source}. Your theme may not show this field, so add it to the description to be sure
+                    buyers and crawlers can read it.
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      </div>
+      <aside className="stack">
+        <section className="card">
+          <div className="card-heading">
+            <div>
+              <h2>Current description</h2>
+              <p>{product.descriptionText ? `${product.descriptionText.split(/\s+/).length} words` : "Empty"}</p>
+            </div>
+          </div>
+          <div className="card-body">
+            <div className="description-text scroll-text">
+              {product.descriptionText || "This product has no description yet."}
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  );
+}
+
 function LivePanel({ data, busy }: { data: Data; busy: boolean }) {
   const live = data.live;
+  const [showTraining, setShowTraining] = useState(false);
   const yes = (ok: boolean | null, good: string, bad: string, unknown = "—") =>
     ok === null ? <span>{unknown}</span> : <span className={ok ? "ok" : "bad"}>{ok ? good : bad}</span>;
   const search = live?.crawlers.filter((c) => c.purpose !== "training") ?? [];
   const training = live?.crawlers.filter((c) => c.purpose === "training") ?? [];
-  return (
-    <section className="card" aria-labelledby="live-heading">
-      <div className="card-heading">
-        <div>
-          <h2 id="live-heading">Live page</h2>
-          <p>{live ? `Checked ${formatDate(live.checkedAt)}` : "What crawlers and assistants actually see."}</p>
+  if (!data.report.publicUrl)
+    return (
+      <section className="card empty">
+        <Icon name="globe" size={26} />
+        <h2>No public page</h2>
+        <p>Publish this product to the Online Store sales channel, scan, and check again.</p>
+      </section>
+    );
+  if (!live)
+    return (
+      <section className="card empty">
+        <Icon name="globe" size={26} />
+        <h2>See this page the way crawlers do</h2>
+        <p>
+          Loads the public product page and robots.txt, then compares the page’s product markup with Shopify.
+          Read-only.
+        </p>
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+          <LiveForm busy={busy} primary />
         </div>
-      </div>
-      <div className="card-body">
-        {!data.report.publicUrl ? (
-          <p>This product has no public Online Store page to check.</p>
-        ) : !live ? (
-          <>
-            <p style={{ marginBottom: 14, fontSize: 12.5 }}>
-              Loads the public product page and robots.txt, then compares the page’s product markup with
-              Shopify. Read-only.
-            </p>
-            <LiveForm busy={busy} />
-          </>
-        ) : (
-          <>
-            <dl className="live-list">
-              <div>
-                <dt>Page</dt>
-                <dd>
-                  {live.error
-                    ? <span className="bad">{live.error}</span>
-                    : live.passwordProtected
-                      ? <span className="bad">Password protected</span>
-                      : yes(live.httpStatus === 200, "Reachable", `HTTP ${live.httpStatus}`)}
-                </dd>
-              </div>
-              <div>
-                <dt>Indexing</dt>
-                <dd>{live.error ? "—" : yes(!live.noindex, "Allowed", "noindex")}</dd>
-              </div>
-              <div>
-                <dt>Canonical</dt>
-                <dd>{yes(live.canonicalMatches, "Matches", "Different page", "Not set")}</dd>
-              </div>
-              <div>
-                <dt>Product markup</dt>
-                <dd>
-                  {live.structured
-                    ? yes(live.structured.count === 1 && !live.structured.invalidBlocks, "Found", live.structured.count > 1 ? `${live.structured.count} blocks` : "Invalid")
-                    : live.error || live.passwordProtected ? "—" : <span className="bad">Missing</span>}
-                </dd>
-              </div>
-              <div>
-                <dt>Price matches</dt>
-                <dd>{yes(live.priceMatches, "Yes", "No")}</dd>
-              </div>
-              <div>
-                <dt>Stock matches</dt>
-                <dd>{yes(live.availabilityMatches, "Yes", "No")}</dd>
-              </div>
-              <div>
-                <dt>Specs on page</dt>
-                <dd>{yes(live.specsVisible, "Visible", "Not visible", "None to check")}</dd>
-              </div>
-            </dl>
-            <ul className="crawlers" aria-label="Crawler access from robots.txt">
+      </section>
+    );
+  return (
+    <div className="columns">
+      <section className="card" aria-labelledby="live-heading">
+        <div className="card-heading">
+          <div>
+            <h2 id="live-heading">Live page</h2>
+            <p>Checked {formatDate(live.checkedAt)}</p>
+          </div>
+          <div className="page-actions">
+            {!data.demo && (
+              <ExternalLink href={live.url} className="button compact">
+                View page
+              </ExternalLink>
+            )}
+            <LiveForm busy={busy} label="Check again" compact />
+          </div>
+        </div>
+        <div className="card-body">
+          <dl className="live-list">
+            <div>
+              <dt>Page</dt>
+              <dd>
+                {live.error ? (
+                  <span className="bad">{live.error}</span>
+                ) : live.passwordProtected ? (
+                  <span className="bad">Password protected</span>
+                ) : (
+                  yes(live.httpStatus === 200, "Reachable", `HTTP ${live.httpStatus}`)
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Indexing</dt>
+              <dd>{live.error ? "—" : yes(!live.noindex, "Allowed", "noindex")}</dd>
+            </div>
+            <div>
+              <dt>Canonical</dt>
+              <dd>{yes(live.canonicalMatches, "Matches", "Different page", "Not set")}</dd>
+            </div>
+            <div>
+              <dt>Product markup</dt>
+              <dd>
+                {live.structured ? (
+                  yes(
+                    live.structured.count === 1 && !live.structured.invalidBlocks,
+                    "Found",
+                    live.structured.count > 1 ? `${live.structured.count} blocks` : "Invalid",
+                  )
+                ) : live.error || live.passwordProtected ? (
+                  "—"
+                ) : (
+                  <span className="bad">Missing</span>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Brand in markup</dt>
+              <dd>{live.structured?.brand ?? "—"}</dd>
+            </div>
+            <div>
+              <dt>GTIN in markup</dt>
+              <dd>{live.structured ? yes(live.structured.hasGtin, "Yes", "No") : "—"}</dd>
+            </div>
+            <div>
+              <dt>Price matches</dt>
+              <dd>{yes(live.priceMatches, "Yes", "No")}</dd>
+            </div>
+            <div>
+              <dt>Stock matches</dt>
+              <dd>{yes(live.availabilityMatches, "Yes", "No")}</dd>
+            </div>
+            <div>
+              <dt>Specs on page</dt>
+              <dd>{yes(live.specsVisible, "Visible", "Not visible", "None to check")}</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+      <aside>
+        <section className="card" aria-labelledby="crawlers-heading">
+          <div className="card-heading">
+            <div>
+              <h2 id="crawlers-heading">Crawler access</h2>
+              <p>{live.robotsFound ? "From robots.txt for this page." : "No robots.txt found: all allowed."}</p>
+            </div>
+          </div>
+          <div className="card-body">
+            <ul className="crawlers" aria-label="Crawler access from robots.txt" style={{ marginTop: 0 }}>
               {search.map((c) => (
                 <li key={c.agent}>
                   <span>
@@ -306,11 +717,19 @@ function LivePanel({ data, busy }: { data: Data; busy: boolean }) {
                 </li>
               ))}
             </ul>
-            <details className="disclosure" style={{ marginTop: 10 }}>
-              <summary className="text-link" style={{ fontSize: 12.5 }}>
-                Training crawlers ({training.filter((c) => !c.allowed).length} blocked)
-              </summary>
-              <ul className="crawlers disclosure-body" style={{ marginTop: 6 }}>
+            <button
+              type="button"
+              className="toggle text-link"
+              style={{ marginTop: 10, fontSize: 12.5 }}
+              aria-expanded={showTraining}
+              aria-controls="training-crawlers"
+              onClick={() => setShowTraining(!showTraining)}
+            >
+              <Icon name="chevron" size={13} />
+              Training crawlers ({training.filter((c) => !c.allowed).length} blocked)
+            </button>
+            <Collapsible open={showTraining} id="training-crawlers">
+              <ul className="crawlers" aria-label="Training crawlers">
                 {training.map((c) => (
                   <li key={c.agent}>
                     <span>
@@ -324,15 +743,11 @@ function LivePanel({ data, busy }: { data: Data; busy: boolean }) {
               <p style={{ fontSize: 12, marginTop: 6 }}>
                 Training crawlers don’t affect search or assistant answers. Blocking them is your choice.
               </p>
-            </details>
-            <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <LiveForm busy={busy} label="Check again" compact />
-              {!data.demo && <ExternalLink href={live.url} className="button compact">View page</ExternalLink>}
-            </div>
-          </>
-        )}
-      </div>
-    </section>
+            </Collapsible>
+          </div>
+        </section>
+      </aside>
+    </div>
   );
 }
 
@@ -341,13 +756,22 @@ export default function ProductWorkspace() {
   const result = useActionData<typeof action>();
   const navigation = useNavigation();
   const busy = navigation.state !== "idle" && navigation.formMethod?.toLowerCase() === "post";
-  const activeIntent = busy ? navigation.formData?.get("intent") : null;
   const { product, report, specs, draft } = data;
   const pending = draft?.status === "DRAFT";
-  const { pathname, search } = useLocation();
+  const [tab, setTab] = useState<TabId>("checks");
+  const tabsRef = useRef<HTMLDivElement>(null);
   const draftRef = useRef<HTMLDivElement>(null);
   const focused = useRef<unknown>(null);
   const pendingId = pending ? draft?.id : null;
+
+  // Deep links: #specs and #live open their tab; #draft keeps the draft in view.
+  useEffect(() => {
+    const hash = window.location.hash;
+    const target: TabId | null = hash === "#specs" ? "specs" : hash === "#live" ? "live" : null;
+    if (!target) return;
+    const frame = requestAnimationFrame(() => setTab(target));
+    return () => cancelAnimationFrame(frame);
+  }, []);
   useEffect(() => {
     // The action result can render before the revalidated draft does; focus
     // once both are present, and only once per result.
@@ -357,11 +781,11 @@ export default function ProductWorkspace() {
     focused.current = result;
     target.focus();
   }, [result, pendingId]);
-  const issues = report.issues;
-  const passed = report.checks.filter((c) => c.status === "pass");
-  const groups = (Object.keys(GROUPS) as CheckGroup[])
-    .map((group) => ({ group, checks: issues.filter((c) => c.group === group) }))
-    .filter((g) => g.checks.length);
+  const goTo = (next: TabId) => {
+    setTab(next);
+    tabsRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  };
+  const live = data.live;
 
   return (
     <>
@@ -413,206 +837,57 @@ export default function ProductWorkspace() {
       )}
       <div ref={draftRef}>{pending && <DraftReview data={data} busy={busy} pending />}</div>
 
-      <div className="columns">
-        <div>
-          <section className="card" aria-labelledby="fixes-heading">
-            <div className="card-heading">
-              <div>
-                <h2 id="fixes-heading">Checks and next steps</h2>
-                <p>
-                  {report.actions} to fix · {report.passed} passed
-                  {report.unknown ? ` · ${report.unknown} not checked yet` : ""}
-                </p>
-              </div>
-            </div>
-            {groups.map(({ group, checks }) => (
-              <div key={group}>
-                <div className="group-title">
-                  <h3>{GROUPS[group].label}</h3>
-                  <small>{GROUPS[group].summary}</small>
-                </div>
-                <div className="stagger">
-                  {checks.map((check) => (
-                    <CheckRow check={check} data={data} busy={busy} key={check.id} />
-                  ))}
-                </div>
-              </div>
-            ))}
-            {!issues.length && (
-              <div className="empty">
-                <Icon name="check" size={24} />
-                <h3>Everything checks out</h3>
-                <p>Keep facts current as the product changes.</p>
-              </div>
-            )}
-            {passed.length > 0 && (
-              <details className="passed disclosure">
-                <summary>
-                  <Icon name="chevron" size={14} />
-                  Passed checks ({passed.length})
-                </summary>
-                <div className="disclosure-body">
-                  {passed.map((check) => (
-                    <CheckRow check={check} data={data} busy={busy} key={check.id} />
-                  ))}
-                </div>
-              </details>
-            )}
-          </section>
-
-          <section className="card" id="specs" aria-labelledby="specs-heading" style={{ scrollMarginTop: 16 }}>
-            <div className="card-heading">
-              <div>
-                <h2 id="specs-heading">Specifications</h2>
-                <p>
-                  {specs.rules.length} key facts for {data.profile.label.toLowerCase()}. Add only values you
-                  have verified; leave the rest empty.
-                </p>
-              </div>
-              <Badge tone={specs.score === 100 ? "success" : "neutral"}>
-                {specs.facts.length} / {specs.rules.length} found
-              </Badge>
-            </div>
-            {!!specs.conflicts.length && (
-              <div style={{ padding: "14px 20px 0" }}>
-                <Notice tone="error">
-                  Conflicting values for{" "}
-                  {specs.conflicts.map((key) => specs.rules.find((r) => r.key === key)?.label).join(", ")}.
-                  Correct them in Shopify, then scan again.
-                </Notice>
-              </div>
-            )}
-            <Form
-              method="post"
-              action={`${pathname}${search}#draft`}
-              aria-busy={activeIntent === "draft"}
-              className="facts-form"
-              key={`${product.updatedAt}-${draft?.id ?? "none"}-${draft?.status ?? "none"}`}
-            >
-              <input type="hidden" name="intent" value="draft" />
-              {specs.rules.map((rule) => {
-                const fact = specs.facts.find((f) => f.key === rule.key);
-                return (
-                  <label className="field" key={rule.key}>
-                    <span className="field-heading">
-                      {rule.label}
-                      <Badge tone={fact ? "success" : "warning"}>{fact ? "Found" : "Missing"}</Badge>
-                    </span>
-                    <input
-                      name={rule.key}
-                      aria-label={rule.label}
-                      disabled={busy}
-                      defaultValue={
-                        fact?.value ??
-                        (pending ? draft?.facts.find((f) => f.key === rule.key)?.value : "") ??
-                        ""
-                      }
-                      maxLength={500}
-                      readOnly={!!fact}
-                      placeholder={fact ? "" : "Add a verified value"}
-                    />
-                    <small>{fact ? fact.source : rule.hint}</small>
-                  </label>
-                );
-              })}
-              <div className="form-foot">
-                <label className="checkbox">
-                  <input type="checkbox" name="confirmed" value="yes" required />
-                  <span>The values I add are accurate for this product.</span>
-                </label>
-                <button
-                  className="button primary"
-                  disabled={busy || data.row.deleted || !!specs.conflicts.length}
-                  aria-busy={activeIntent === "draft"}
-                >
-                  {activeIntent === "draft" && <Spinner />}
-                  {activeIntent === "draft"
-                    ? "Creating draft..."
-                    : pending
-                      ? "Replace draft with these facts"
-                      : "Create description draft"}
-                </button>
-              </div>
-            </Form>
-          </section>
-
-          <section className="card" aria-labelledby="answers-heading">
-            <div className="card-heading">
-              <div>
-                <h2 id="answers-heading">Buyer questions</h2>
-                <p>What an assistant could answer from your verified facts. Nothing is guessed.</p>
-              </div>
-            </div>
-            <ul className="answers">
-              {report.answers.map((answer) => (
-                <li key={answer.key}>
-                  <strong>{answer.question}</strong>
-                  <Badge
-                    tone={
-                      answer.status === "description"
-                        ? "success"
-                        : answer.status === "stored"
-                          ? "info"
-                          : answer.status === "conflict"
-                            ? "critical"
-                            : "warning"
-                    }
-                  >
-                    {answer.status === "description"
-                      ? "In description"
-                      : answer.status === "stored"
-                        ? "Stored fact only"
-                        : answer.status === "conflict"
-                          ? "Conflicting values"
-                          : "Missing"}
-                  </Badge>
-                  <p className={answer.value ? "answer-value" : undefined}>
-                    {answer.value ??
-                      (answer.status === "conflict"
-                        ? "Correct the conflict before this can be answered."
-                        : "No answer is generated without a verified value.")}
-                  </p>
-                  {answer.status === "stored" && (
-                    <p>
-                      {answer.source}. Your theme may not show this field, so add it to the description to be
-                      sure buyers and crawlers can read it.
-                    </p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {draft && !pending && (
-            <details className="old-draft disclosure">
-              <summary>
-                <Icon name="chevron" size={14} />
-                View {draft.status.toLowerCase().replace(/_/g, " ")} draft
-              </summary>
-              <div className="disclosure-body">
-                <DraftReview data={data} busy={busy} pending={false} />
-              </div>
-            </details>
-          )}
-        </div>
-
-        <aside className="stack">
-          <LivePanel data={data} busy={busy} />
-          <section className="card">
-            <div className="card-heading">
-              <div>
-                <h2>Current description</h2>
-                <p>{product.descriptionText ? `${product.descriptionText.split(/\s+/).length} words` : "Empty"}</p>
-              </div>
-            </div>
-            <div className="card-body">
-              <div className="description-text scroll-text">
-                {product.descriptionText || "This product has no description yet."}
-              </div>
-            </div>
-          </section>
-        </aside>
+      <div ref={tabsRef} style={{ scrollMarginTop: 12 }}>
+        <Tabs
+          label="Product sections"
+          value={tab}
+          onChange={(id) => setTab(id as TabId)}
+          tabs={[
+            { id: "checks", label: "Checks", count: report.actions || undefined },
+            { id: "specs", label: "Specifications", count: `${specs.facts.length}/${specs.rules.length}` },
+            {
+              id: "live",
+              label: "Live page",
+              count: live ? (live.error || live.passwordProtected || live.httpStatus !== 200 ? "!" : undefined) : undefined,
+            },
+          ]}
+        />
       </div>
+      <TabPanel id="checks" active={tab === "checks"}>
+        <ChecksPanel data={data} busy={busy} goTo={goTo} />
+      </TabPanel>
+      <TabPanel id="specs" active={tab === "specs"}>
+        <SpecsPanel data={data} busy={busy} />
+        {draft && !pending && <OldDraft data={data} busy={busy} />}
+      </TabPanel>
+      <TabPanel id="live" active={tab === "live"}>
+        <LivePanel data={data} busy={busy} />
+      </TabPanel>
     </>
+  );
+}
+
+function OldDraft({ data, busy }: { data: Data; busy: boolean }) {
+  const [open, setOpen] = useState(false);
+  const draft = data.draft!;
+  return (
+    <div className="old-draft">
+      <button
+        type="button"
+        className="toggle passed-toggle card"
+        style={{ borderTop: "1px solid var(--line)" }}
+        aria-expanded={open}
+        aria-controls="old-draft"
+        onClick={() => setOpen(!open)}
+      >
+        <Icon name="chevron" size={14} />
+        View {draft.status.toLowerCase().replace(/_/g, " ")} draft
+      </button>
+      <Collapsible open={open} id="old-draft">
+        <div style={{ paddingTop: 12 }}>
+          <DraftReview data={data} busy={busy} pending={false} />
+        </div>
+      </Collapsible>
+    </div>
   );
 }

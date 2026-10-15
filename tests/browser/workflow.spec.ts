@@ -28,6 +28,8 @@ test("merchant can search, draft, approve, publish and restore", async ({
   await page.getByRole("textbox", { name: "Search products" }).fill("Summit");
   await expect(page.getByRole("link", { name: /Trail 28 Backpack/ })).toHaveCount(0);
   await page.getByRole("link", { name: /Summit Shell Jacket/ }).first().click();
+  await expect(page.getByRole("heading", { name: "Checks and next steps" })).toBeVisible();
+  await page.getByRole("tab", { name: /Specifications/ }).click();
   await expect(page.getByRole("heading", { name: "Specifications", exact: true })).toBeVisible();
   await page.locator('input[name="dimensions"]').fill("Regular fit");
   await page.locator('input[name="use"]').fill("Day hiking");
@@ -77,11 +79,13 @@ test("draft facts survive reload, can be revised, and rejection leaves the produ
 }) => {
   await page.goto("/app/products");
   await page.getByRole("link", { name: /Ridge Fleece/ }).first().click();
+  await page.getByRole("tab", { name: /Specifications/ }).click();
   await page.locator('input[name="material"]').fill("Polyester");
   await page.locator('input[name="confirmed"]').check();
   await page.getByRole("button", { name: "Create description draft" }).click();
   await expect(page.locator(".notice.success")).toContainText("Draft created");
   await page.reload();
+  await page.getByRole("tab", { name: /Specifications/ }).click();
   await expect(page.locator('input[name="material"]')).toHaveValue("Polyester");
   await page.locator('input[name="material"]').fill("Cotton fleece");
   await page.locator('input[name="confirmed"]').check();
@@ -146,17 +150,18 @@ test("live page checks surface visibility fixes in the plan and on the product",
   await page.getByRole("button", { name: "Check live pages" }).click();
   await expect(page.locator(".notice.success")).toContainText("Live page checks complete");
   // The demo tent page carries a duplicate Product block from an old app.
-  const structured = page.locator("details.fix").filter({ hasText: "Product structured data" });
-  await structured.locator("summary").click();
+  const structured = page.locator(".fix").filter({ hasText: "Product structured data" });
+  await structured.locator(".fix-trigger").click();
+  await expect(structured.locator(".fix-trigger")).toHaveAttribute("aria-expanded", "true");
   await expect(structured).toContainText("Basecamp Two Tent");
   await expect(structured).toContainText("2 separate Product blocks");
   await structured.getByRole("link", { name: "Open Basecamp Two Tent" }).click();
-  await expect(page.getByRole("heading", { name: "Live page" })).toBeVisible();
+  // The link opens the product on its Live page tab.
+  await expect(page.getByRole("tab", { name: /Live page/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator(".live-list")).toContainText("2 blocks");
   await expect(page.getByLabel("Crawler access from robots.txt")).toContainText("OAI-SearchBot");
-  const training = page.locator("details").filter({ hasText: /Training crawlers \(1 blocked\)/ });
-  await training.locator("summary").click();
-  await expect(training.locator("li").filter({ hasText: "GPTBot" })).toContainText("Blocked");
+  await page.getByRole("button", { name: /Training crawlers \(1 blocked\)/ }).click();
+  await expect(page.locator("#training-crawlers li").filter({ hasText: "GPTBot" })).toContainText("Blocked");
   await page.getByRole("button", { name: "Check again" }).click();
   await expect(page.locator(".notice.success")).toContainText(/moment ago|Live check/);
   await page.goto("/app");
@@ -190,6 +195,7 @@ test("slow form submissions show progress only on the action being performed", a
 }) => {
   await page.goto("/app/products");
   await page.getByRole("link", { name: /Trail 28 Backpack/ }).first().click();
+  await page.getByRole("tab", { name: /Specifications/ }).click();
   await page.locator('input[name="care"]').fill("Spot clean");
   await page.locator('input[name="confirmed"]').check();
   await page.getByRole("button", { name: "Create description draft" }).click();
@@ -333,6 +339,7 @@ test("the checklist setting switches products between fixed and automatic profil
   await page.goto("/app/products");
   await page.getByRole("link", { name: /Ridge Fleece/ }).first().click();
   await expect(page.locator(".meta-line")).toContainText("Apparel & accessories checklist");
+  await page.getByRole("tab", { name: /Specifications/ }).click();
   await expect(page.locator('input[name="color"]')).toBeVisible();
   await page.goto("/app/settings");
   await page.getByRole("radio", { name: "Outdoor & sports gear" }).check();
@@ -360,6 +367,33 @@ test("legacy data is marked not checked until a scan collects it, and old GEO li
   await expect(page.locator(".notice.success")).toContainText("Scan complete");
   await page.goto(`/app/products/${row.id}`);
   await expect(page.getByText("imported before some checks existed", { exact: false })).toHaveCount(0);
-  await page.getByText(/Passed checks \(\d+\)/).click();
+  await page.getByRole("button", { name: /Passed checks \(\d+\)/ }).click();
   await expect(page.getByText("Vendor: Trail Supply", { exact: true })).toBeVisible();
+});
+
+test("the overview guides the next step and tabs support the keyboard", async ({ page }) => {
+  await page.goto("/app");
+  const next = page.locator(".next-step");
+  await expect(next.getByText("Next step", { exact: true })).toBeVisible();
+  const progress = page.getByRole("list", { name: "Setup progress" });
+  await expect(progress.locator("li")).toHaveCount(3);
+  await expect(progress.locator("li").first()).toHaveClass(/done/);
+  await page.goto("/app/products");
+  await page.getByRole("link", { name: /Summit Shell Jacket/ }).first().click();
+  const checks = page.getByRole("tab", { name: /Checks/ });
+  await checks.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByRole("tab", { name: /Specifications/ })).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByRole("tab", { name: /Specifications/ })).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(page.getByRole("tab", { name: /Live page/ })).toHaveAttribute("aria-selected", "true");
+  await page.keyboard.press("Home");
+  await expect(checks).toHaveAttribute("aria-selected", "true");
+  // Exactly one check opens at a time; closed details cannot be focused.
+  const triggers = page.locator(".check-trigger");
+  await expect(triggers.first()).toHaveAttribute("aria-expanded", "true");
+  await triggers.nth(1).click();
+  await expect(triggers.nth(1)).toHaveAttribute("aria-expanded", "true");
+  await expect(triggers.first()).toHaveAttribute("aria-expanded", "false");
+  expect(await page.locator(".collapse:not(.open)").first().evaluate((el) => (el as HTMLElement).inert)).toBe(true);
 });

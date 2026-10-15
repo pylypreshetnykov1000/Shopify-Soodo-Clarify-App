@@ -1,4 +1,6 @@
+import { useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
+import { Collapsible } from "../ui/motion";
 import {
   Form,
   useActionData,
@@ -69,6 +71,37 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 }
 
+function SavedDescriptions({ id, before, after }: { id: string; before: string; after: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        className="toggle text-link"
+        style={{ marginTop: 8, fontSize: 12.5 }}
+        aria-expanded={open}
+        aria-controls={`saved-${id}`}
+        onClick={() => setOpen(!open)}
+      >
+        <Icon name="chevron" size={13} />
+        View saved descriptions
+      </button>
+      <Collapsible open={open} id={`saved-${id}`}>
+        <div className="draft-columns">
+          <div>
+            <h3>Before</h3>
+            <div className="description-text">{before || "No description"}</div>
+          </div>
+          <div className="proposed">
+            <h3>Published</h3>
+            <div className="description-text">{after}</div>
+          </div>
+        </div>
+      </Collapsible>
+    </>
+  );
+}
+
 const tone = (status: string) =>
   status === "PUBLISHED" || status === "RESTORED"
     ? "success"
@@ -124,19 +157,7 @@ export default function History() {
                     <Badge tone={tone(change.status)}>{change.status.toLowerCase().replace(/_/g, " ")}</Badge>
                   </div>
                   {change.message && <Notice tone="info">{change.message}</Notice>}
-                  <details className="disclosure">
-                    <summary>View saved descriptions</summary>
-                    <div className="draft-columns disclosure-body">
-                      <div>
-                        <h3>Before</h3>
-                        <div className="description-text">{change.beforeText || "No description"}</div>
-                      </div>
-                      <div className="proposed">
-                        <h3>Published</h3>
-                        <div className="description-text">{change.afterText}</div>
-                      </div>
-                    </div>
-                  </details>
+                  <SavedDescriptions id={change.id} before={change.beforeText} after={change.afterText} />
                 </div>
                 <div className="history-actions">
                   {change.status === "PUBLISHED" && (

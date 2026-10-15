@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router";
 import type { ReactNode } from "react";
+import { CountUp, Toast } from "./motion";
 
 /** Links keep Shopify's embedded query parameters so App Bridge stays connected. */
 export function useAppHref(to: string) {
@@ -31,6 +32,7 @@ export function AppLink({
       aria-current={current ? "page" : undefined}
       aria-label={label}
       prefetch="intent"
+      viewTransition
     >
       {children}
     </Link>
@@ -63,6 +65,8 @@ export function Notice({
 }) {
   if (!result && !children) return null;
   const kind = tone ?? (result ? (result.ok ? "success" : "error") : "info");
+  // Success is transient feedback; errors and guidance stay in place.
+  if (result?.ok && !tone) return <Toast key={toastKey(result)} message={result.message} />;
   return (
     <div
       className={`notice ${kind}`}
@@ -73,6 +77,12 @@ export function Notice({
       <div>{result?.message ?? children}</div>
     </div>
   );
+}
+const toastKeys = new WeakMap<object, number>();
+let toastCount = 0;
+function toastKey(result: object) {
+  if (!toastKeys.has(result)) toastKeys.set(result, ++toastCount);
+  return toastKeys.get(result);
 }
 export function Badge({
   children,
@@ -148,7 +158,9 @@ export function Dial({ value, label }: { value: number; label: string }) {
           style={{ ["--circumference" as string]: circumference }}
         />
       </svg>
-      <span>{value}</span>
+      <span>
+        <CountUp value={value} />
+      </span>
     </div>
   );
 }
@@ -232,6 +244,7 @@ export type IconName = keyof typeof ICONS;
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
   return (
     <svg
+      className={name === "chevron" ? "chevron" : undefined}
       width={size}
       height={size}
       viewBox="0 0 24 24"
