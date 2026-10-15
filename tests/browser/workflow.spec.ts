@@ -38,11 +38,17 @@ test("merchant can search, draft, approve, publish and restore", async ({
   await expect(
     page.getByRole("heading", { name: "Where these facts came from" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Review draft", exact: true }).click();
   await expect(page).toHaveURL(/#draft$/);
+  await expect(page.locator("#draft")).toBeFocused();
   await expect(
     page.getByRole("heading", { name: "Review description" }),
   ).toBeVisible();
+  await expect(page.locator(".facts-details")).not.toHaveAttribute("open");
+  await expect(page.locator(".sources")).toHaveCount(1);
+  await page.screenshot({
+    path: "test-results/draft-review-desktop.png",
+    fullPage: true,
+  });
   await page.locator('input[name="approved"]').check();
   await page.getByRole("button", { name: "Publish to demo catalog" }).click();
   await expect(page.locator(".notice.success")).toContainText(
@@ -98,12 +104,14 @@ test("draft facts survive reload, can be revised, and rejection leaves the produ
   await expect(page.locator(".notice.success")).toContainText("Draft created");
   await page.reload();
   await expect(page.locator('input[name="material"]')).toHaveValue("Polyester");
+  await page.getByText("Edit product facts", { exact: true }).click();
   await page.locator('input[name="material"]').fill("Cotton fleece");
   await page.locator('input[name="confirmed"]').check();
   await page
     .getByRole("button", { name: "Replace draft with these facts" })
     .click();
   await expect(page.locator(".notice.success")).toContainText("Draft created");
+  await expect(page.locator(".sources")).toHaveCount(1);
   await expect(page.locator(".sources")).toContainText("Cotton fleece");
   const id = await page
     .locator('.draft-actions input[name="suggestionId"]')
@@ -208,6 +216,7 @@ test("slow form submissions show progress only on the action being performed", a
   await page.locator('input[name="confirmed"]').check();
   await page.getByRole("button", { name: "Create description draft" }).click();
   await expect(page.locator(".notice.success")).toContainText("Draft created");
+  await page.getByText("Edit product facts", { exact: true }).click();
   let release!: () => void;
   const gate = new Promise<void>((resolve) => {
     release = resolve;

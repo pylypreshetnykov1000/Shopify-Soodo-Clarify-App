@@ -44,9 +44,6 @@ export default function App() {
       </a>
       <aside className="sidebar">
         <AppLink to="/app" className="brand">
-          <span className="brand-mark">
-            <Icon name="leaf" size={24} />
-          </span>
           Soodo GEO
         </AppLink>
         <div className="sidebar-caption">Product information</div>
@@ -80,15 +77,6 @@ export default function App() {
             </AppLink>
           ))}
         </nav>
-        <div className="sidebar-bottom">
-          <span className="connection-dot" />
-          <div>
-            <strong>
-              {demo ? "Trail Supply" : shop.replace(".myshopify.com", "")}
-            </strong>
-            <small>{demo ? "Local demo store" : "Shopify connected"}</small>
-          </div>
-        </div>
       </aside>
       <div className="workspace">
         <header className="topbar">
@@ -104,16 +92,11 @@ export default function App() {
               {showLoading ? "Loading..." : ""}
             </span>
             <span className="status-pill">
-              {demo ? "Demo store" : "Shopify connected"}
+              {demo ? "Demo · Local changes only" : "Shopify connected"}
             </span>
           </div>
         </header>
         <main className="main-content" id="main-content" tabIndex={-1}>
-          {demo && (
-            <div className="demo-note">
-              Demo store. Changes stay on this computer.
-            </div>
-          )}
           <Outlet />
         </main>
       </div>

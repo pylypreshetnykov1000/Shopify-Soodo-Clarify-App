@@ -74,29 +74,39 @@ export function CatalogView({
           <p>
             {overview
               ? "Review product information before publishing changes."
-              : "Check missing details, prepare drafts, and review changes."}
+              : "Product details and description drafts."}
           </p>
         </div>
-        <fetcher.Form method="post">
-          <input type="hidden" name="intent" value="sync" />
-          <input
-            type="hidden"
-            name="restart"
-            value={data.store.syncStarted ? "false" : "true"}
-          />
-          <button
-            className={`button scan-button ${products.length ? "secondary" : "primary"}`}
-            disabled={scanning}
-            aria-busy={scanning}
-          >
-            <Icon name="search" size={16} />
-            {scanning
-              ? "Scanning..."
-              : data.store.syncStarted
-                ? "Continue scan"
-                : "Scan catalog"}
-          </button>
-        </fetcher.Form>
+        <div className="page-actions">
+          {overview && summary.next && (
+            <AppLink
+              to={`/app/products/${summary.next.recordId}${summary.next.draft ? "#draft" : ""}`}
+              className="button primary"
+            >
+              {summary.drafts ? "Review next draft" : "Review next product"}
+            </AppLink>
+          )}
+          <fetcher.Form method="post">
+            <input type="hidden" name="intent" value="sync" />
+            <input
+              type="hidden"
+              name="restart"
+              value={data.store.syncStarted ? "false" : "true"}
+            />
+            <button
+              className={`button scan-button ${products.length ? "secondary" : "primary"}`}
+              disabled={scanning}
+              aria-busy={scanning}
+            >
+              <Icon name="search" size={16} />
+              {scanning
+                ? "Scanning..."
+                : data.store.syncStarted
+                  ? "Continue scan"
+                  : "Scan catalog"}
+            </button>
+          </fetcher.Form>
+        </div>
       </div>
       <Notice result={fetcher.data} />
       {data.store.syncStarted ? (
@@ -118,14 +128,30 @@ export function CatalogView({
               <span className="metric-label">Products imported</span>
               <strong className="metric-value">{products.length}</strong>
             </div>
-            <div className="metric">
+            <button
+              className="metric metric-button"
+              onClick={() => {
+                setFilter("gaps");
+                setPage(0);
+                document.getElementById("catalog")?.scrollIntoView();
+              }}
+            >
               <span className="metric-label">Need information</span>
               <strong className="metric-value">{summary.gaps}</strong>
-            </div>
-            <div className="metric">
+              <span className="metric-hint">View products</span>
+            </button>
+            <button
+              className="metric metric-button"
+              onClick={() => {
+                setFilter("ready");
+                setPage(0);
+                document.getElementById("catalog")?.scrollIntoView();
+              }}
+            >
               <span className="metric-label">Drafts to review</span>
               <strong className="metric-value">{summary.drafts}</strong>
-            </div>
+              <span className="metric-hint">View drafts</span>
+            </button>
             <div className="metric">
               <span className="metric-label">Checklist completeness</span>
               <strong className="metric-value">
@@ -133,30 +159,6 @@ export function CatalogView({
               </strong>
             </div>
           </div>
-          {summary.next && (
-            <section className="next-review">
-              <div>
-                <h2>
-                  {summary.drafts
-                    ? "Next draft to review"
-                    : "Next product to review"}
-                </h2>
-                <p>
-                  {summary.next.title}
-                  {summary.drafts
-                    ? " · Check the proposed description and sources."
-                    : ` · ${summary.next.audit.missing.length} missing fields`}
-                </p>
-              </div>
-              <AppLink
-                to={`/app/products/${summary.next.recordId}${summary.next.draft ? "#draft" : ""}`}
-                className="button primary"
-              >
-                {summary.drafts ? "Review next draft" : "Review next product"}
-                <Icon name="arrow" size={16} />
-              </AppLink>
-            </section>
-          )}
         </>
       )}
       <section
@@ -254,7 +256,7 @@ export function CatalogView({
                   <thead>
                     <tr>
                       <th scope="col">Product</th>
-                      <th scope="col">Completeness</th>
+                      <th scope="col">Details found</th>
                       <th scope="col">Review status</th>
                       <th scope="col">
                         <span className="sr-only">Action</span>
@@ -293,7 +295,9 @@ export function CatalogView({
                         </td>
                         <td>
                           <div className="score">
-                            <span>{product.audit.score}%</span>
+                            <span>
+                              {Math.round(product.audit.score / 20)} / 5
+                            </span>
                             <div className="meter">
                               <span
                                 style={{ width: `${product.audit.score}%` }}
