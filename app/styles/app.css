@@ -625,7 +625,8 @@ hr {
 .search-box input:focus-visible {
   outline: none;
 }
-.sort-control select {
+.sort-control select,
+.page-size-control select {
   min-height: 36px;
   border: 1px solid #b5b5b5;
   border-radius: 6px;
@@ -747,6 +748,7 @@ tbody tr:hover {
 }
 .table-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
@@ -754,6 +756,18 @@ tbody tr:hover {
   padding: 14px 20px;
   font-size: 12px;
   color: var(--muted);
+}
+.catalog-pagination-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  margin-left: auto;
+}
+.page-size-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .pagination {
   display: flex;
@@ -1245,6 +1259,10 @@ tbody tr:hover {
   .table-footer {
     padding: 14px 16px;
     flex-wrap: wrap;
+  }
+  .catalog-pagination-controls {
+    width: 100%;
+    margin-left: 0;
   }
   .table-controls {
     flex-wrap: wrap;

@@ -3,7 +3,7 @@ import { useFetcher } from "react-router";
 import type { loader, action } from "../routes/app._index";
 import { AppLink, Badge, Icon, Notice } from "./common";
 
-const PAGE_SIZE = 50;
+const PAGE_SIZES = [10, 25, 50, 100];
 export function CatalogView({
   data,
   overview = false,
@@ -15,6 +15,7 @@ export function CatalogView({
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [sort, setSort] = useState("attention");
+  const [pageSize, setPageSize] = useState(50);
   const [requestedPage, setPage] = useState(0);
   const products = data.products;
   const summary = useMemo(() => {
@@ -56,11 +57,9 @@ export function CatalogView({
             a.title.localeCompare(b.title),
       );
   }, [products, search, filter, sort]);
-  const page = Math.min(
-    requestedPage,
-    Math.max(0, Math.ceil(visible.length / PAGE_SIZE) - 1),
-  );
-  const shown = visible.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
+  const page = Math.min(requestedPage, pageCount - 1);
+  const shown = visible.slice(page * pageSize, (page + 1) * pageSize);
   const scanning = fetcher.state !== "idle";
   const syncedAt = data.store.syncedAt
     ? new Date(data.store.syncedAt).toISOString()
@@ -376,32 +375,52 @@ export function CatalogView({
         <div className="table-footer">
           <span role="status">
             {visible.length
-              ? `${page * PAGE_SIZE + 1}–${page * PAGE_SIZE + shown.length} of ${visible.length} products`
+              ? `${page * pageSize + 1}–${page * pageSize + shown.length} of ${visible.length} products`
               : "0 products"}
             {visible.length !== products.length
               ? ` (${products.length} imported)`
               : ""}
           </span>
-          {visible.length > PAGE_SIZE && (
-            <nav className="pagination" aria-label="Catalog pages">
-              <button
-                className="button compact"
-                disabled={page === 0}
-                onClick={() => setPage(page - 1)}
-              >
-                Previous
-              </button>
-              <span>
-                Page {page + 1} of {Math.ceil(visible.length / PAGE_SIZE)}
-              </span>
-              <button
-                className="button compact"
-                disabled={(page + 1) * PAGE_SIZE >= visible.length}
-                onClick={() => setPage(page + 1)}
-              >
-                Next
-              </button>
-            </nav>
+          {products.length > 0 && (
+            <div className="catalog-pagination-controls">
+              <label className="page-size-control">
+                <span>Products per page</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setPage(0);
+                  }}
+                >
+                  {PAGE_SIZES.map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {pageCount > 1 && (
+                <nav className="pagination" aria-label="Catalog pages">
+                  <button
+                    className="button compact"
+                    disabled={page === 0}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    Previous
+                  </button>
+                  <span>
+                    Page {page + 1} of {pageCount}
+                  </span>
+                  <button
+                    className="button compact"
+                    disabled={page === pageCount - 1}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    Next
+                  </button>
+                </nav>
+              )}
+            </div>
           )}
         </div>
       </section>

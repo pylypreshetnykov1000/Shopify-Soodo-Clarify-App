@@ -277,7 +277,7 @@ test("all workspace screens fit phone, tablet and desktop without font downloads
   expect(fontRequests).toEqual([]);
 });
 
-test("large catalogs render in pages and filtering resets pagination", async ({
+test("Overview and Products support page sizes, page boundaries and filtered results", async ({
   page,
 }) => {
   await page.goto("/app/products");
@@ -296,18 +296,85 @@ test("large catalogs render in pages and filtering resets pagination", async ({
   }));
   try {
     await db.catalogProduct.createMany({ data: products });
-    await page.reload();
-    await expect(page.locator("tbody tr")).toHaveCount(50);
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-    await expect(page.getByText("Page 2 of 3", { exact: true })).toBeVisible();
-    await page
-      .getByRole("textbox", { name: "Search products" })
-      .fill("UX test 119");
-    await expect(page.locator("tbody tr")).toHaveCount(1);
-    await expect(
-      page.getByRole("navigation", { name: "Catalog pages" }),
-    ).toHaveCount(0);
-    await expect(page.getByRole("link", { name: /UX test 119/ })).toBeVisible();
+    const total = await db.catalogProduct.count({ where: { shop: DEMO_SHOP } });
+    for (const path of ["/app", "/app/products"]) {
+      await page.goto(path);
+      const size = page.getByRole("combobox", { name: "Products per page" });
+      const previous = page.getByRole("button", {
+        name: "Previous",
+        exact: true,
+      });
+      const next = page.getByRole("button", { name: "Next", exact: true });
+      const range = page.locator(".table-footer [role=status]");
+      await expect(size).toHaveValue("50");
+      await expect(page.locator("tbody tr")).toHaveCount(50);
+      await expect(previous).toBeDisabled();
+
+      for (const count of [10, 25, 50, 100]) {
+        await size.selectOption(String(count));
+        await expect(page.locator("tbody tr")).toHaveCount(count);
+        await expect(range).toHaveText(`1–${count} of ${total} products`);
+        await next.click();
+        await expect(range).toHaveText(
+          `${count + 1}–${Math.min(count * 2, total)} of ${total} products`,
+        );
+        await previous.click();
+        await expect(previous).toBeDisabled();
+      }
+
+      // Last page contains only the remaining rows; changing size resets it.
+      await next.click();
+      await expect(page.locator("tbody tr")).toHaveCount(total - 100);
+      await expect(next).toBeDisabled();
+      await size.selectOption("25");
+      await expect(previous).toBeDisabled();
+      await expect(page.locator("tbody tr")).toHaveCount(25);
+      await next.click();
+      await page
+        .getByRole("combobox", { name: "Sort products" })
+        .selectOption("title");
+      await expect(previous).toBeDisabled();
+      await next.click();
+      await page
+        .getByRole("button", { name: "Needs information", exact: true })
+        .click();
+      await expect(range).toContainText(/^1–/);
+      await page
+        .getByRole("button", { name: "All products", exact: true })
+        .click();
+      await next.click();
+
+      const search = page.getByRole("textbox", { name: "Search products" });
+      await search.fill("UX test 119");
+      await expect(page.locator("tbody tr")).toHaveCount(1);
+      await expect(range).toHaveText(`1–1 of 1 products (${total} imported)`);
+      await expect(
+        page.getByRole("navigation", { name: "Catalog pages" }),
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("link", { name: /UX test 119/ }),
+      ).toBeVisible();
+      await search.fill("no matching catalog product");
+      await expect(page.locator("tbody tr")).toHaveCount(0);
+      await expect(range).toHaveText(`0 products (${total} imported)`);
+      await expect(size).toHaveValue("25");
+      await page
+        .getByRole("button", { name: "Clear search and filters" })
+        .click();
+      await expect(previous).toBeDisabled();
+
+      await page.setViewportSize({ width: 320, height: 740 });
+      await size.selectOption("10");
+      await expect(next).toBeVisible();
+      await next.click();
+      await expect(range).toHaveText(`11–20 of ${total} products`);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      await page.setViewportSize({ width: 1280, height: 800 });
+    }
   } finally {
     await db.catalogProduct.deleteMany({
       where: { shop: DEMO_SHOP, gid: { in: products.map((p) => p.gid) } },
