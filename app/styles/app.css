@@ -381,6 +381,65 @@ hr {
   color: #005bd3;
   line-height: 1.6;
 }
+.geo-scope-note {
+  margin: -8px 0 20px;
+  font-size: 12px;
+  max-width: 820px;
+}
+.geo-check-list {
+  padding: 0 20px;
+}
+.geo-check {
+  padding: 16px 0;
+  border-top: 1px solid var(--border);
+}
+.geo-check-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 6px;
+}
+.geo-check p {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.geo-check small {
+  display: block;
+  margin-top: 7px;
+}
+.geo-check .text-link {
+  margin-top: 10px;
+}
+.geo-check .geo-action-copy {
+  color: #303030;
+  margin-top: 8px;
+}
+.geo-answers {
+  margin-top: 20px;
+}
+.geo-check .geo-answer-value {
+  color: #303030;
+  margin: 9px 0;
+}
+.geo-help {
+  margin: 20px 0;
+}
+.geo-passed {
+  border-top: 1px solid var(--border);
+}
+.geo-passed > summary {
+  padding: 14px 20px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.geo-help p {
+  margin-top: 10px;
+  font-size: 12px;
+}
+.geo-table {
+  min-width: 640px;
+}
 .eyebrow {
   display: none;
 }

@@ -51,6 +51,7 @@ export default function App() {
           {[
             { to: "/app", name: "Overview", icon: "grid" as const },
             { to: "/app/products", name: "Products", icon: "box" as const },
+            { to: "/app/geo", name: "GEO checks", icon: "search" as const },
             {
               to: "/app/history",
               name: "Change history",
@@ -112,6 +113,7 @@ export default function App() {
           Overview
         </a>
         <a href="/app/products">Products</a>
+        <a href="/app/geo">GEO checks</a>
         <a href="/app/history">Change history</a>
         <a href="/app/settings">Settings</a>
       </NavMenu>

@@ -39,7 +39,15 @@ export function demoAdapter(): CatalogAdapter {
         where: { shop: DEMO_SHOP, deleted: false },
       });
       return {
-        products: rows.map((row) => JSON.parse(row.payload) as ProductData),
+        products: rows.map((row) => {
+          const product = JSON.parse(row.payload) as ProductData;
+          return {
+            ...product,
+            discovery:
+              product.discovery ??
+              demoProducts.find((p) => p.id === product.id)?.discovery,
+          };
+        }),
         cursor: null,
       };
     },

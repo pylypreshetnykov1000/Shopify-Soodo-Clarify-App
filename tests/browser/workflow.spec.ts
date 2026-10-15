@@ -257,6 +257,7 @@ test("all workspace screens fit phone, tablet and desktop without font downloads
     for (const path of [
       "/app",
       "/app/products",
+      "/app/geo",
       "/app/history",
       "/app/settings",
     ]) {
@@ -340,4 +341,95 @@ test("delayed navigation shows a quiet status and clears it after loading", asyn
     page.getByRole("heading", { name: "Settings", exact: true }),
   ).toBeVisible();
   await expect(page.locator(".navigation-status")).toBeEmpty();
+});
+
+test("GEO checks prioritize imported products and distinguish stored facts from description answers", async ({
+  page,
+}) => {
+  await page.goto("/app/geo");
+  await expect(
+    page.getByRole("heading", { name: "GEO checks", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("tbody tr")).toHaveCount(3);
+  await page
+    .getByRole("combobox", { name: "Products included in GEO checks" })
+    .selectOption("all");
+  await expect(page.locator("tbody tr")).toHaveCount(4);
+  await page
+    .getByRole("textbox", { name: "Search GEO products" })
+    .fill("Summit");
+  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await page
+    .getByRole("link", { name: "Summit Shell Jacket", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Checks and next steps" }),
+  ).toBeVisible();
+  const material = page.locator(".geo-check").filter({
+    has: page.getByRole("heading", { name: "What is it made from?" }),
+  });
+  await expect(material).toContainText("Stored fact only");
+  await expect(material).toContainText("100% recycled nylon");
+  const care = page.locator(".geo-check").filter({
+    has: page.getByRole("heading", { name: "How should it be cared for?" }),
+  });
+  await expect(care).toContainText("No answer is generated");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/geo-product-mobile.png",
+    fullPage: true,
+  });
+  await page
+    .getByRole("link", { name: "Review product facts", exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Product facts", exact: true }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/app/geo");
+  await page.screenshot({
+    path: "test-results/geo-overview-desktop.png",
+    fullPage: true,
+  });
+});
+
+test("legacy GEO data is marked not checked until a catalog rescan collects it", async ({
+  page,
+}) => {
+  const row = await db.catalogProduct.findFirstOrThrow({
+    where: { shop: DEMO_SHOP, title: "Summit Shell Jacket" },
+  });
+  const product = JSON.parse(row.payload);
+  delete product.discovery;
+  await db.catalogProduct.update({
+    where: { id: row.id },
+    data: { payload: JSON.stringify(product) },
+  });
+  await page.goto(`/app/geo/${row.id}`);
+  await expect(
+    page.getByText(
+      "This product was imported before discovery fields were added.",
+      { exact: false },
+    ),
+  ).toBeVisible();
+  await expect(page.getByText("Not checked", { exact: true })).toHaveCount(3);
+  await page
+    .getByRole("link", { name: "Back to GEO checks", exact: false })
+    .click();
+  await page.getByRole("button", { name: "Scan catalog" }).click();
+  await expect(page.locator(".notice.success")).toContainText("Scan complete");
+  await page
+    .getByRole("link", { name: "Summit Shell Jacket", exact: true })
+    .click();
+  await expect(page.getByText("Not checked", { exact: true })).toHaveCount(0);
+  await page.getByText("Passed data checks (7)", { exact: true }).click();
+  await expect(
+    page.getByText("Shopify vendor: Trail Supply.", { exact: true }),
+  ).toBeVisible();
 });

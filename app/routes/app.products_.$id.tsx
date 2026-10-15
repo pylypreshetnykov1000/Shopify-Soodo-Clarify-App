@@ -219,7 +219,12 @@ export default function ProductReview() {
       <AppLink to="/app/products" className="back-link">
         ← Back to products
       </AppLink>
-      <div className="page-heading" id={pending ? "draft" : undefined} ref={reviewHeading} tabIndex={-1}>
+      <div
+        className="page-heading"
+        id={pending ? "draft" : undefined}
+        ref={reviewHeading}
+        tabIndex={-1}
+      >
         <div>
           <h1>{product.title}</h1>
           <p>
@@ -228,11 +233,16 @@ export default function ProductReview() {
             completeness
           </p>
         </div>
-        <Badge tone={report.score === 100 ? "success" : "warning"}>
-          {report.missing.length
-            ? `${report.missing.length} missing fields`
-            : "Checklist complete"}
-        </Badge>
+        <div className="page-actions">
+          <AppLink to={`/app/geo/${data.row.id}`} className="button secondary">
+            GEO checks
+          </AppLink>
+          <Badge tone={report.score === 100 ? "success" : "warning"}>
+            {report.missing.length
+              ? `${report.missing.length} missing fields`
+              : "Checklist complete"}
+          </Badge>
+        </div>
       </div>
       <Notice result={result} />
       {pending && draftReview}
