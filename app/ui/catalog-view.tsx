@@ -1,0 +1,33 @@
+import { useState } from "react";
+import { useFetcher } from "react-router";
+import type { loader, action } from "../routes/app._index";
+import { AppLink, Badge, Icon, Notice } from "./common";
+export function CatalogView({ data, overview = false }: { data: Awaited<ReturnType<typeof loader>>; overview?: boolean }) {
+  const fetcher = useFetcher<typeof action>();
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+  const products = data.products;
+  const average = products.length ? Math.round(products.reduce((sum, p) => sum + p.audit.score, 0) / products.length) : 0;
+  const missing = products.reduce((sum, p) => sum + p.audit.missing.length, 0);
+  const drafts = products.filter(p => p.draft).length;
+  const visible = products.filter(p => p.title.toLowerCase().includes(search.toLowerCase()) && (filter === "all" || (filter === "gaps" && p.audit.missing.length > 0) || (filter === "ready" && p.draft) || (filter === "complete" && p.audit.score === 100)));
+  return <>
+    <div className="page-heading"><div><div className="eyebrow">YOUR PRODUCT INFORMATION, WORKING HARDER</div><h1>{overview ? "A clearer catalog. A better discovery." : "Your products"}</h1><p>{overview ? "Give shoppers and AI search the facts they need to understand your products." : "Find information gaps and turn verified facts into useful product descriptions."}</p></div>
+      <fetcher.Form method="post"><input type="hidden" name="intent" value="sync"/><input type="hidden" name="restart" value={data.store.syncStarted ? "false" : "true"}/><button className="button primary" disabled={fetcher.state !== "idle"}><Icon name="spark"/>{fetcher.state !== "idle" ? "Scanning…" : data.store.syncStarted ? "Continue scan" : "Scan catalog"}</button></fetcher.Form>
+    </div><Notice result={fetcher.data}/>
+    {!data.store.syncedAt && products.length > 0 && !data.store.syncStarted && <div className="notice">Your catalog may have changed in Shopify. Scan again to refresh these results.</div>}
+    {data.store.syncStarted && <div className="notice" role="status">Your scan is in progress. Continue scanning to finish importing every product. Metrics currently cover {products.length} imported products.</div>}
+    {overview && <><div className="metrics">
+      <div className="metric"><div className="metric-label">Information completeness <Icon name="leaf"/></div><div className="metric-value">{average}<span>%</span></div><div className="meter"><span style={{ width: `${average}%` }}/></div><p>Verified fields across your catalog</p></div>
+      <div className="metric"><div className="metric-label">Products scanned <Icon name="box"/></div><div className="metric-value">{products.length}</div><p>{data.store.syncedAt ? "Catalog connected and ready to review" : "Run your first scan to get started"}</p></div>
+      <div className="metric"><div className="metric-label">Information gaps <Icon name="search"/></div><div className="metric-value">{missing}</div><p>Specifications that need your input</p></div>
+      <div className="metric"><div className="metric-label">Drafts to review <Icon name="check"/></div><div className="metric-value">{drafts}</div><p>Ready for your approval</p></div>
+    </div><div className="guide-card"><div className="guide-icon"><Icon name="spark" size={27}/></div><div><div className="eyebrow">SMALL CHANGES, USEFUL ANSWERS</div><h2>Start with the facts you already have.</h2><p>We check material, weight, fit, intended use, and care. Every draft shows its sources. You decide what goes live.</p></div><AppLink to="/app/products" className="button secondary">Review products <Icon name="arrow"/></AppLink></div></>}
+    <section className="card product-card"><div className="card-heading"><div><h2>{overview ? "Your catalog at a glance" : "Product information"}</h2><p>{products.length} products · Outdoor gear checklist</p></div>{overview && <AppLink to="/app/products" className="text-link">View all products <Icon name="arrow" size={16}/></AppLink>}</div>
+      <div className="table-toolbar"><div className="filters" aria-label="Filter products">{[["all", "All products"], ["gaps", "Needs information"], ["ready", "Draft ready"], ["complete", "Complete"]].map(([value, label]) => <button key={value} className={filter === value ? "filter active" : "filter"} onClick={() => setFilter(value)} aria-pressed={filter === value}>{label}</button>)}</div><label className="search-box"><Icon name="search" size={17}/><input aria-label="Search products" placeholder="Search products…" value={search} onChange={e => setSearch(e.target.value)}/></label></div>
+      <div className="table-scroll"><table><thead><tr><th>Product</th><th>Completeness</th><th>What needs attention</th><th><span className="sr-only">Action</span></th></tr></thead><tbody>{visible.map(product => <tr key={product.recordId}><td><AppLink to={`/app/products/${product.recordId}`} className="product-name"><span className="product-thumb">{product.image ? <img src={product.image.url} alt="" loading="lazy"/> : <Icon name="box" size={23}/>}</span><span><strong>{product.title}</strong><small>{product.productType || "Uncategorized"} · {product.status.toLowerCase()}</small></span></AppLink></td><td><div className="score"><span>{product.audit.score}%</span><div className="meter"><span style={{ width: `${product.audit.score}%` }}/></div></div></td><td>{product.audit.conflicts.length ? <Badge tone="warning">Conflicting facts</Badge> : product.audit.missing.length ? <><Badge tone="warning">{product.audit.missing.length} missing fields</Badge><small className="gap-label">{product.audit.missing.slice(0, 2).map(r => r.label).join(", ")}{product.audit.missing.length > 2 ? " + more" : ""}</small></> : <Badge tone="success">All checklist fields found</Badge>}</td><td><AppLink to={`/app/products/${product.recordId}`} className="button compact">{product.draft ? "Review draft" : "Review"}<Icon name="arrow" size={15}/></AppLink></td></tr>)}</tbody></table></div>
+      {!visible.length && <div className="empty"><Icon name="box" size={32}/><h3>{products.length ? "No matching products" : "Your catalog starts here"}</h3><p>{products.length ? "Try another search or filter." : "Scan your catalog to find product information gaps."}</p></div>}
+      <div className="table-footer">Showing {visible.length} of {products.length} imported products<span>Five transparent checks. Every product.</span></div>
+    </section><div className="footer-note"><Icon name="check" size={16}/>Changes are only published after you approve them. Completeness measures this checklist, not AI search rankings.</div>
+  </>;
+}

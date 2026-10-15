@@ -32,3 +32,64 @@ model Session {
   refreshToken        String?
   refreshTokenExpires DateTime?
 }
+
+model Store {
+  shop        String   @id
+  category    String   @default("outdoor")
+  syncCursor  String?
+  syncedAt    DateTime?
+  syncStarted DateTime?
+  syncToken   String?
+  syncLease   DateTime?
+  scanRun     String?
+  products    CatalogProduct[]
+}
+
+model CatalogProduct {
+  id          String   @id @default(cuid())
+  shop        String
+  gid         String
+  title       String
+  payload     String
+  seenAt      DateTime @default(now())
+  cacheUpdatedAt DateTime @default(now())
+  scanRun     String?
+  deleted     Boolean  @default(false)
+  lockToken   String?
+  lockUntil   DateTime?
+  store       Store @relation(fields: [shop], references: [shop], onDelete: Cascade)
+  suggestions Suggestion[]
+  changes     Change[]
+  @@unique([shop, gid])
+  @@index([shop, deleted])
+}
+
+model Suggestion {
+  id          String   @id @default(cuid())
+  productId   String
+  fingerprint String
+  beforeHtml  String
+  afterHtml   String
+  facts       String
+  status      String   @default("DRAFT")
+  createdAt   DateTime @default(now())
+  product     CatalogProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  changes     Change[]
+  @@index([productId, status])
+}
+
+model Change {
+  id           String   @id @default(cuid())
+  productId    String
+  suggestionId String
+  beforeHtml   String
+  afterHtml    String
+  status       String   @default("PUBLISHING")
+  requestOutcome String @default("PENDING")
+  message      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  product      CatalogProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  @@index([productId, status])
+}

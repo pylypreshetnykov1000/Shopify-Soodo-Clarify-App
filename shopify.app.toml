@@ -1,9 +1,17 @@
 # This file stores configurations for your Shopify app.
-client_id = ""
+client_id = "61dae5d937dbca44f2859e356686766c"
+name = "Soodo Product Clarity"
+application_url = "https://example.com"
+embedded = true
+
+[auth]
+redirect_urls = ["https://example.com/auth/callback", "https://example.com/auth/shopify/callback"]
+
+[build]
+automatically_update_urls_on_dev = true
 
 [access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "read_products,write_products"
 
 [webhooks]
 api_version = "2026-10"
@@ -17,6 +25,14 @@ api_version = "2026-10"
   [[webhooks.subscriptions]]
   topics = [ "app/scopes_update" ]
   uri = "/webhooks/app/scopes_update"
+
+  [[webhooks.subscriptions]]
+  topics = ["products/create", "products/update", "products/delete"]
+  uri = "/webhooks/products"
+
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "/webhooks/privacy"
 
   # Mandatory compliance topic for public apps only
   # See: https://shopify.dev/docs/apps/build/privacy-law-compliance

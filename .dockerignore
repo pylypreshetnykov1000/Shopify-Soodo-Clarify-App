@@ -1,3 +1,12 @@
 .cache
 build
 node_modules
+.git
+.env
+.env.*
+prisma/*.sqlite*
+test-results
+playwright-report
+artifacts
+.shopify
+.react-router

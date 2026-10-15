@@ -1,236 +1,83 @@
-# Shopify App Template - React Router
+# Soodo Product Clarity
 
-This is a template for building a [Shopify app](https://shopify.dev/docs/apps/getting-started) using [React Router](https://reactrouter.com/). It was forked from the [Shopify Remix app template](https://github.com/Shopify/shopify-app-template-remix) and converted to React Router.
+A Shopify embedded app that audits outdoor product specifications, creates source-based description drafts, and publishes merchant-approved changes with saved snapshots.
 
-Rather than cloning this repo, follow the [Quick Start steps](https://github.com/Shopify/shopify-app-template-react-router#quick-start).
+## Run the interactive demo
 
-Visit the [`shopify.dev` documentation](https://shopify.dev/docs/api/shopify-app-react-router) for more details on the React Router app package.
+Requires Node 22.12+ and npm. No Shopify or AI credentials are needed for the demo.
 
-## Upgrading from Remix
-
-If you have an existing Remix app that you want to upgrade to React Router, please follow the [upgrade guide](https://github.com/Shopify/shopify-app-template-react-router/wiki/Upgrading-from-Remix). Otherwise, please follow the quick start guide below.
-
-## Quick start
-
-### Prerequisites
-
-Before you begin, you'll need to [download and install the Shopify CLI](https://shopify.dev/docs/apps/tools/cli/getting-started) if you haven't already.
-
-### Setup
-
-```shell
-shopify app init --template=https://github.com/Shopify/shopify-app-template-react-router
+```powershell
+npm ci
+npm run setup
+npm run dev:local
 ```
 
-### Local Development
+Open http://127.0.0.1:3000. The demo has four sample outdoor products and uses a persistent local SQLite database. Publishing and restoring work against the local catalog; they never call Shopify. Demo access is restricted to loopback hosts and disabled in production. Demo POST requests require a matching Origin header.
 
-```shell
-shopify app dev
-```
+On Windows, stop the dev server before rerunning `npm run setup`: a running Prisma client locks its engine DLL.
 
-Press P to open the URL to your app. Once you click install, you can start development.
+## What works
 
-Local development is powered by [the Shopify CLI](https://shopify.dev/docs/apps/tools/cli). It logs into your account, connects to an app, provides environment variables, updates remote config, creates a tunnel and provides commands to generate extensions.
+- Searchable product catalog with gap, draft, and completeness filters.
+- Five explicit checks: material, weight, dimensions/fit, intended use, and care.
+- Reading existing description labels and recognized product metafields, with conflict detection.
+- Draft creation from existing facts and merchant-confirmed missing values, with per-value sources.
+- Merchant approval, draft rejection, Shopify description publishing, remote verification, and snapshots.
+- Stale-source checks before publishing and current-description checks before restore.
+- Per-product operation locks and durable publishing journals. Uncertain writes block further changes.
+- Resumable catalog scans, complete metafield pagination, product invalidation webhooks, authenticated uninstall and privacy handlers.
+- Official Shopify authentication and session storage; all product/history queries are scoped to the authenticated shop.
 
-### Authenticating and querying data
+Draft generation uses deterministic templates. No external language model is connected, and the app does not claim to measure or guarantee AI rankings. Publishing appends a visible specifications section to the existing product description, rather than writing new metafields or changing theme code.
 
-To authenticate and query data you can use the `shopify` const that is exported from `/app/shopify.server.js`:
+## Connect Shopify
 
-```js
-export async function loader({ request }) {
-  const { admin } = await shopify.authenticate.admin(request);
+The app uses Shopify's official React Router starter and GraphQL Admin API `2026-10`. The local config has been linked to a Shopify app; use your own app's client ID when deploying a separate installation.
 
-  const response = await admin.graphql(`
-    {
-      products(first: 25) {
-        nodes {
-          title
-          description
-        }
-      }
-    }`);
+1. Create or select an app and a development store in the Shopify Dev Dashboard.
+2. Run `npm run config:link` and complete Shopify's interactive authentication to link the app.
+3. Keep the `read_products,write_products` scopes and webhook subscriptions in `shopify.app.toml`.
+4. Run `npm run dev` and install the app on the development store.
+5. Run scans until complete, create a draft, publish, inspect the actual storefront, and restore it.
 
-  const {
-    data: {
-      products: { nodes },
-    },
-  } = await response.json();
+The Shopify CLI supplies development credentials and tunnel URLs. For hosted environments, supply the variables in `.env.example` and update app/redirect URLs. Do not use placeholder URLs for deployment. Never enable demo mode on a host.
 
-  return nodes;
-}
-```
+## Render staging deployment
 
-This template comes pre-configured with examples of:
+The repository includes a [Render Blueprint](render.yaml), a separate PostgreSQL schema and migration history, and a database health endpoint. Follow [the deployment guide](docs/RENDER_DEPLOYMENT.md). The Blueprint proposes paid web/database services; review Render's costs before creating them. Local demo/tests continue to use SQLite. Real PostgreSQL connectivity and the Linux container build still need validation on the hosting environment.
 
-1. Setting up your Shopify app in [/app/shopify.server.ts](https://github.com/Shopify/shopify-app-template-react-router/blob/main/app/shopify.server.ts)
-2. Querying data using Graphql. Please see: [/app/routes/app.\_index.tsx](https://github.com/Shopify/shopify-app-template-react-router/blob/main/app/routes/app._index.tsx).
-3. Responding to webhooks. Please see [/app/routes/webhooks.tsx](https://github.com/Shopify/shopify-app-template-react-router/blob/main/app/routes/webhooks.app.uninstalled.tsx).
+References: [official starter](https://github.com/Shopify/shopify-app-template-react-router), [authentication](https://shopify.dev/docs/apps/build/authentication-authorization), [productUpdate](https://shopify.dev/docs/api/admin-graphql/2026-10/mutations/productUpdate), [App Store requirements](https://shopify.dev/docs/apps/launch/shopify-app-store/app-store-requirements).
 
-Please read the [documentation for @shopify/shopify-app-react-router](https://shopify.dev/docs/api/shopify-app-react-router) to see what other API's are available.
+## Checks
 
-## Shopify Dev MCP
-
-This template is configured with the Shopify Dev MCP. This instructs [Cursor](https://cursor.com/), [GitHub Copilot](https://github.com/features/copilot) and [Claude Code](https://claude.com/product/claude-code) and [Google Gemini CLI](https://github.com/google-gemini/gemini-cli) to use the Shopify Dev MCP.
-
-For more information on the Shopify Dev MCP please read [the documentation](https://shopify.dev/docs/apps/build/devmcp).
-
-## Deployment
-
-### Application Storage
-
-This template uses [Prisma](https://www.prisma.io/) to store session data, by default using an [SQLite](https://www.sqlite.org/index.html) database.
-The database is defined as a Prisma schema in `prisma/schema.prisma`.
-
-This use of SQLite works in production if your app runs as a single instance.
-The database that works best for you depends on the data your app needs and how it is queried.
-Here’s a short list of databases providers that provide a free tier to get started:
-
-| Database   | Type             | Hosters                                                                                                                                                                                                                                    |
-| ---------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| MySQL      | SQL              | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-mysql), [Planet Scale](https://planetscale.com/), [Amazon Aurora](https://aws.amazon.com/rds/aurora/), [Google Cloud SQL](https://cloud.google.com/sql/docs/mysql) |
-| PostgreSQL | SQL              | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-postgresql), [Amazon Aurora](https://aws.amazon.com/rds/aurora/), [Google Cloud SQL](https://cloud.google.com/sql/docs/postgres)                                   |
-| Redis      | Key-value        | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-redis), [Amazon MemoryDB](https://aws.amazon.com/memorydb/)                                                                                                        |
-| MongoDB    | NoSQL / Document | [Digital Ocean](https://www.digitalocean.com/products/managed-databases-mongodb), [MongoDB Atlas](https://www.mongodb.com/atlas/database)                                                                                                  |
-
-To use one of these, you can use a different [datasource provider](https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#datasource) in your `schema.prisma` file, or a different [SessionStorage adapter package](https://github.com/Shopify/shopify-api-js/blob/main/packages/shopify-api/docs/guides/session-storage.md).
-
-### Build
-
-Build the app by running the command below with the package manager of your choice:
-
-Using yarn:
-
-```shell
-yarn build
-```
-
-Using npm:
-
-```shell
+```powershell
+npm run typecheck
+npm test
+npx playwright install chromium
+npm run test:e2e
 npm run build
+npm run test:production
+npm run lint
 ```
 
-Using pnpm:
+All test commands create a separate temporary SQLite database from the actual migrations, then remove it. Browser tests start their own server on port 3101 and never reuse or reset your demo on port 3000. The production smoke test runs the compiled server on port 3103 with placeholder credentials; it checks startup, assets, disabled demo access, and the unauthenticated response without contacting a real Shopify store. Build before running that check.
 
-```shell
-pnpm run build
-```
+See [the latest QA report](docs/QA_REPORT.md) for tested scenarios, fixes, and remaining validation boundaries.
 
-## Hosting
+## Pilot boundaries and release gates
 
-When you're ready to set up your app in production, you can follow [our deployment documentation](https://shopify.dev/docs/apps/launch/deployment) to host it externally. From there, you have a few options:
+This is a working development/pilot build, not an App Store release. Live installation, authenticated embedded navigation, token refresh, real webhook delivery, and storefront HTML normalization need validation on a connected development store. The owner reported successful Shopify CLI configuration validation after linking the app. GraphQL operations passed Shopify Toolkit schema validation. The Toolkit's full-file UI checker could not resolve its own React/module environment; project TypeScript checks and browser tests passed instead.
 
-- [Google Cloud Run](https://shopify.dev/docs/apps/launch/deployment/deploy-to-google-cloud-run): This tutorial is written specifically for this example repo, and is compatible with the extended steps included in the subsequent [**Build your app**](tutorial) in the **Getting started** docs. It is the most detailed tutorial for taking a React Router-based Shopify app and deploying it to production. It includes configuring permissions and secrets, setting up a production database, and even hosting your apps behind a load balancer across multiple regions.
-- [Fly.io](https://fly.io/docs/js/shopify/): Leverages the Fly.io CLI to quickly launch Shopify apps to a single machine.
-- [Render](https://render.com/docs/deploy-shopify-app): This tutorial guides you through using Docker to deploy and install apps on a Dev store.
-- [Manual deployment guide](https://shopify.dev/docs/apps/launch/deployment/deploy-to-hosting-service): This resource provides general guidance on the requirements of deployment including environment variables, secrets, and persistent data.
+- SQLite is for local demo/tests. Render deployment uses the separate PostgreSQL schema/migrations. Before a public launch, validate that deployment, token protection, and backups/restores.
+- Catalog scans are manually resumed in batches of ten. Scheduled jobs, large-catalog server pagination, and billing are future work. Validate pilot performance with up to 500 products before expanding.
+- Product webhooks conservatively invalidate drafts and mark the scan out of date. The UI cache is refreshed by the next scan; publishing always reads Shopify again.
+- The audit recognizes labelled facts, not arbitrary prose, and does not independently verify manufacturer claims. Some structured metafield formats require further normalization before launch.
+- Shopify description updates do not expose an atomic compare-and-swap in this implementation. A merchant edit between the final read and the mutation is a remaining race; snapshots and verification cannot eliminate it. Address this explicitly during live pilot testing.
+- Exact HTML verification can report a conflict if Shopify normalizes markup. Test representative descriptions on the live store before general release; never claim success for an unverified result.
+- An unacknowledged request with unchanged remote content remains uncertain, because a delayed write cannot be ruled out. The product stays blocked pending verification/operator investigation; there is no automatic blind retry.
+- Paid plans, AI rank monitoring, bulk publishing, LLM rewriting, and storefront blocks are not included.
+- Remaining development-tool advisories need resolution before release. `npm audit --omit=dev` reported zero runtime vulnerabilities at verification time.
 
-When you reach the step for [setting up environment variables](https://shopify.dev/docs/apps/deployment/web#set-env-vars), you also need to set the variable `NODE_ENV=production`.
+Uninstall deletes the app's stored catalog, sessions, drafts, and snapshots. It leaves published product descriptions in Shopify. Restore desired descriptions before uninstalling.
 
-## Gotchas / Troubleshooting
-
-### Database tables don't exist
-
-If you get an error like:
-
-```
-The table `main.Session` does not exist in the current database.
-```
-
-Create the database for Prisma. Run the `setup` script in `package.json` using `npm`, `yarn` or `pnpm`.
-
-### Navigating/redirecting breaks an embedded app
-
-Embedded apps must maintain the user session, which can be tricky inside an iFrame. To avoid issues:
-
-1. Use `Link` from `react-router` or `@shopify/polaris`. Do not use `<a>`.
-2. Use `redirect` returned from `authenticate.admin`. Do not use `redirect` from `react-router`
-3. Use `useSubmit` from `react-router`.
-
-This only applies if your app is embedded, which it will be by default.
-
-### Webhooks: shop-specific webhook subscriptions aren't updated
-
-If you are registering webhooks in the `afterAuth` hook, using `shopify.registerWebhooks`, you may find that your subscriptions aren't being updated.
-
-Instead of using the `afterAuth` hook declare app-specific webhooks in the `shopify.app.toml` file. This approach is easier since Shopify will automatically sync changes every time you run `deploy` (e.g: `npm run deploy`). Please read these guides to understand more:
-
-1. [app-specific vs shop-specific webhooks](https://shopify.dev/docs/apps/build/webhooks/subscribe#app-specific-subscriptions)
-2. [Create a subscription tutorial](https://shopify.dev/docs/apps/build/webhooks/subscribe/get-started?deliveryMethod=https)
-
-If you do need shop-specific webhooks, keep in mind that the package calls `afterAuth` in 2 scenarios:
-
-- After installing the app
-- When an access token expires
-
-During normal development, the app won't need to re-authenticate most of the time, so shop-specific subscriptions aren't updated. To force your app to update the subscriptions, uninstall and reinstall the app. Revisiting the app will call the `afterAuth` hook.
-
-### Webhooks: Admin created webhook failing HMAC validation
-
-Webhooks subscriptions created in the [Shopify admin](https://help.shopify.com/en/manual/orders/notifications/webhooks) will fail HMAC validation. This is because the webhook payload is not signed with your app's secret key.
-
-The recommended solution is to use [app-specific webhooks](https://shopify.dev/docs/apps/build/webhooks/subscribe#app-specific-subscriptions) defined in your toml file instead. Test your webhooks by triggering events manually in the Shopify admin(e.g. Updating the product title to trigger a `PRODUCTS_UPDATE`).
-
-### Webhooks: Admin object undefined on webhook events triggered by the CLI
-
-When you trigger a webhook event using the Shopify CLI, the `admin` object will be `undefined`. This is because the CLI triggers an event with a valid, but non-existent, shop. The `admin` object is only available when the webhook is triggered by a shop that has installed the app. This is expected.
-
-Webhooks triggered by the CLI are intended for initial experimentation testing of your webhook configuration. For more information on how to test your webhooks, see the [Shopify CLI documentation](https://shopify.dev/docs/apps/tools/cli/commands#webhook-trigger).
-
-### Incorrect GraphQL Hints
-
-By default the [graphql.vscode-graphql](https://marketplace.visualstudio.com/items?itemName=GraphQL.vscode-graphql) extension for will assume that GraphQL queries or mutations are for the [Shopify Admin API](https://shopify.dev/docs/api/admin). This is a sensible default, but it may not be true if:
-
-1. You use another Shopify API such as the storefront API.
-2. You use a third party GraphQL API.
-
-If so, please update [.graphqlrc.ts](https://github.com/Shopify/shopify-app-template-react-router/blob/main/.graphqlrc.ts).
-
-### Using Defer & await for streaming responses
-
-By default the CLI uses a cloudflare tunnel. Unfortunately cloudflare tunnels wait for the Response stream to finish, then sends one chunk. This will not affect production.
-
-To test [streaming using await](https://reactrouter.com/api/components/Await#await) during local development we recommend [localhost based development](https://shopify.dev/docs/apps/build/cli-for-apps/networking-options#localhost-based-development).
-
-### "nbf" claim timestamp check failed
-
-This is because a JWT token is expired. If you are consistently getting this error, it could be that the clock on your machine is not in sync with the server. To fix this ensure you have enabled "Set time and date automatically" in the "Date and Time" settings on your computer.
-
-### Using MongoDB and Prisma
-
-If you choose to use MongoDB with Prisma, there are some gotchas in Prisma's MongoDB support to be aware of. Please see the [Prisma SessionStorage README](https://www.npmjs.com/package/@shopify/shopify-app-session-storage-prisma#mongodb).
-
-### Unable to require(`C:\...\query_engine-windows.dll.node`).
-
-Unable to require(`C:\...\query_engine-windows.dll.node`).
-The Prisma engines do not seem to be compatible with your system.
-
-query_engine-windows.dll.node is not a valid Win32 application.
-
-**Fix:** Set the environment variable:
-
-```shell
-PRISMA_CLIENT_ENGINE_TYPE=binary
-```
-
-This forces Prisma to use the binary engine mode, which runs the query engine as a separate process and can work via emulation on Windows ARM64.
-
-## Resources
-
-React Router:
-
-- [React Router docs](https://reactrouter.com/home)
-
-Shopify:
-
-- [Intro to Shopify apps](https://shopify.dev/docs/apps/getting-started)
-- [Shopify App React Router docs](https://shopify.dev/docs/api/shopify-app-react-router)
-- [Shopify CLI](https://shopify.dev/docs/apps/tools/cli)
-- [Shopify App Bridge](https://shopify.dev/docs/api/app-bridge-library).
-- [Polaris Web Components](https://shopify.dev/docs/api/app-home/polaris-web-components).
-- [App extensions](https://shopify.dev/docs/apps/app-extensions/list)
-- [Shopify Functions](https://shopify.dev/docs/api/functions)
-
-Internationalization:
-
-- [Internationalizing your app](https://shopify.dev/docs/apps/best-practices/internationalization/getting-started)
+See [the build checklist](docs/BUILD_PLAN.md) for the next release steps.

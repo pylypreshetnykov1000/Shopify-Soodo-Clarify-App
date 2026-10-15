@@ -1,0 +1,11 @@
+import type { ActionFunctionArgs } from "react-router";
+import { authenticate } from "../shopify.server";
+import db from "../db.server";
+export async function action({ request }: ActionFunctionArgs) {
+  const { shop, topic } = await authenticate.webhook(request);
+  if (topic === "SHOP_REDACT") await db.$transaction([
+    db.store.deleteMany({ where: { shop } }), db.session.deleteMany({ where: { shop } }),
+  ]);
+  // No customer/order data is collected, so customer requests have no records.
+  return new Response(null, { status: 200 });
+}
