@@ -1,6 +1,6 @@
 # This file stores configurations for your Shopify app.
 client_id = "61dae5d937dbca44f2859e356686766c"
-name = "Soodo Product Clarity"
+name = "Soodo GEO"
 application_url = "https://shopify-soodo-clarify-app.onrender.com"
 embedded = true
 

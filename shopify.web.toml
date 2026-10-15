@@ -1,4 +1,4 @@
-name = "Soodo web"
+name = "Soodo GEO web"
 roles = ["frontend", "backend"]
 webhooks_path = "/webhooks/app/uninstalled"
 

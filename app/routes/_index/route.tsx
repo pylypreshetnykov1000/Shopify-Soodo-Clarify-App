@@ -11,7 +11,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 export default function Landing() {
   return (
     <main className="landing">
-      <div className="brand">soodo</div>
+      <div className="brand">Soodo GEO</div>
       <h1>Review your product information</h1>
       <p>
         Connect Shopify to check missing specifications and prepare description

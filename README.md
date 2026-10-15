@@ -1,4 +1,4 @@
-# Soodo Product Clarity
+# Soodo GEO
 
 A Shopify embedded app that audits outdoor product specifications, creates source-based description drafts, and publishes merchant-approved changes with saved snapshots.
 

@@ -47,7 +47,7 @@ export default function App() {
           <span className="brand-mark">
             <Icon name="leaf" size={24} />
           </span>
-          soodo<span className="brand-dot">.</span>
+          Soodo GEO
         </AppLink>
         <div className="sidebar-caption">Product information</div>
         <nav aria-label="Main navigation">
