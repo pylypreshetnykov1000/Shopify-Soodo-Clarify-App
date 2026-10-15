@@ -34,6 +34,28 @@ export const GROUPS: Record<CheckGroup, { label: string; summary: string }> = {
     summary: "Are price, stock and social proof clear and consistent?",
   },
 };
+/** Why each check matters, in plain language, shown next to the fix. */
+export const WHY: Record<string, string> = {
+  publication: "Draft and archived products are hidden from shoppers, search engines and AI assistants.",
+  "storefront-url": "Without a public page there is nothing for crawlers to read or for assistants to link to.",
+  "live-page": "A page that fails to load or asks not to be indexed is invisible in search and AI answers.",
+  "ai-crawlers": "Search engines and AI assistants can only cite pages their crawlers are allowed to read.",
+  "structured-data": "Product markup is how machines read price, stock and identifiers. Conflicting or duplicate markup is often ignored.",
+  category: "The standard category tells Shopify, Google and AI shopping agents exactly what the product is.",
+  vendor: "Brand is one of the first things shoppers and assistants filter by.",
+  gtin: "Barcodes let search engines and shopping agents match the product to the same item elsewhere.",
+  sku: "Unique SKUs keep variants distinct in product feeds and agent catalogs.",
+  description: "Assistants answer from text. A short description gives them little to work with.",
+  conflicts: "When two sources disagree, neither can be trusted, so the fact is left out.",
+  "visible-facts": "Facts written on the page can be read and quoted. Facts kept only in metafields often can’t.",
+  "category-attributes": "Attributes like color and material power filters in Shopify, Google Shopping and AI agents.",
+  image: "Products with clear photos are shown and chosen more often in visual results.",
+  "image-alt": "Alt text describes the image to crawlers and screen readers.",
+  "search-preview": "The title and summary are what people see before they click.",
+  price: "Products without a price can’t appear in shopping results.",
+  availability: "Products that can’t be bought are usually left out of shopping recommendations.",
+  reviews: "Ratings are a strong trust signal in shopping results and assistant comparisons.",
+};
 export const WEIGHT: Record<Priority, number> = { high: 3, medium: 2, low: 1 };
 const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 

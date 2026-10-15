@@ -165,7 +165,8 @@ test("live page checks surface visibility fixes in the plan and on the product",
   await page.getByRole("button", { name: "Check again" }).click();
   await expect(page.locator(".notice.success")).toContainText(/moment ago|Live check/);
   await page.goto("/app");
-  await expect(page.locator(".hero")).toContainText("Live pages checked");
+  await expect(page.getByRole("region", { name: "Readiness by area" }).locator(".area-tile")).toHaveCount(4);
+  await expect(page.getByRole("list", { name: "Setup progress" }).locator("li").nth(1)).toHaveClass(/done/);
   await expect(page.getByRole("heading", { name: "Store-wide signals" })).toBeVisible();
   await expect(page.locator(".signal").filter({ hasText: "Shipping policy" })).toContainText("Not set up");
 });
@@ -396,4 +397,42 @@ test("the overview guides the next step and tabs support the keyboard", async ({
   await expect(triggers.nth(1)).toHaveAttribute("aria-expanded", "true");
   await expect(triggers.first()).toHaveAttribute("aria-expanded", "false");
   expect(await page.locator(".collapse:not(.open)").first().evaluate((el) => (el as HTMLElement).inert)).toBe(true);
+});
+
+test("overview, products and fix plan connect through filters, sorting and whole-row links", async ({ page }) => {
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recent changes" })).toBeVisible();
+  // Area tiles open the fix plan filtered to that area.
+  await page.getByRole("link", { name: /^Content:/ }).click();
+  await expect(page).toHaveURL(/\/app\/fixes\?area=content/);
+  const areaFilter = page.getByRole("group", { name: "Filter by area" });
+  await expect(areaFilter.getByRole("button", { name: /Content/ })).toHaveAttribute("aria-pressed", "true");
+  const rows = page.locator(".fix");
+  const contentCount = await rows.count();
+  expect(contentCount).toBeGreaterThan(0);
+  for (const area of await rows.locator(".fix-area").allTextContents()) expect(area).toBe("Content");
+  // Priority chips narrow the list further and toggle off again.
+  const low = page.getByRole("group", { name: "Filter by priority" }).getByRole("button", { name: /Low/ });
+  await low.click();
+  await expect(low).toHaveAttribute("aria-pressed", "true");
+  expect(await rows.count()).toBeLessThan(contentCount);
+  await low.click();
+  await expect(rows).toHaveCount(contentCount);
+  // Each fix explains why it matters.
+  await expect(rows.first().locator(".row-main small")).not.toBeEmpty();
+
+  await page.goto("/app/products");
+  const readiness = page.getByRole("columnheader", { name: "Readiness" });
+  await readiness.getByRole("button").click();
+  await expect(readiness).toHaveAttribute("aria-sort", "ascending");
+  await readiness.getByRole("button").click();
+  await expect(readiness).toHaveAttribute("aria-sort", "descending");
+  const scores = (await page.locator(".score strong").allTextContents()).map(Number);
+  expect(scores).toEqual([...scores].sort((a, b) => b - a));
+  await expect(page.getByRole("combobox", { name: "Sort products" })).toHaveValue("readiness-desc");
+  // Clicking anywhere on a row opens the product.
+  // The stretched link covers the cell, so the click lands on the link.
+  await page.locator("tbody tr").first().locator(".live-col").click({ force: true });
+  await expect(page.getByRole("heading", { name: "Checks and next steps" })).toBeVisible();
 });

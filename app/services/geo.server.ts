@@ -2,8 +2,10 @@ import db from "../db.server";
 import { audit, previewText, type Fact, type ProductData } from "../core/catalog";
 import {
   auditGeo,
+  GROUPS,
   storeSignals,
   WEIGHT,
+  WHY,
   type CheckGroup,
   type Destination,
   type Priority,
@@ -35,9 +37,11 @@ export type FixGroup = {
   group: CheckGroup;
   priority: Priority;
   action: string;
+  why: string;
   destination: Destination;
   products: { recordId: string; title: string; evidence: string }[];
 };
+export type LiveStatus = "ok" | "issues" | "unchecked" | "none";
 
 /** One pass over the catalog for the overview, product list and fix plan. */
 export async function catalogOverview(shop: string) {
@@ -62,6 +66,10 @@ export async function catalogOverview(shop: string) {
   ]);
   const setting = store?.category ?? "auto";
   const groups = new Map<string, FixGroup>();
+  const areaKeys = Object.keys(GROUPS) as CheckGroup[];
+  const areas = Object.fromEntries(
+    areaKeys.map((key) => [key, { group: key, passing: 0, total: 0, issues: 0 }]),
+  ) as Record<CheckGroup, { group: CheckGroup; passing: number; total: number; issues: number }>;
   let latestLive: { at: Date; check: LiveCheck } | null = null;
   const products = rows.map((row) => {
     const product = JSON.parse(row.payload) as ProductData;
@@ -75,6 +83,15 @@ export async function catalogOverview(shop: string) {
     const active = product.status === "ACTIVE";
     // Inactive products are excluded from the fix plan; they are not for sale.
     if (active)
+      for (const key of areaKeys) {
+        const known = report.checks.filter((c) => c.group === key && c.status !== "unknown");
+        if (!known.length) continue;
+        areas[key].total++;
+        const failing = known.filter((c) => c.status === "action").length;
+        if (!failing) areas[key].passing++;
+        areas[key].issues += failing;
+      }
+    if (active)
       for (const issue of report.issues.filter((c) => c.status === "action")) {
         const entry = groups.get(issue.id) ?? {
           id: issue.id,
@@ -82,6 +99,7 @@ export async function catalogOverview(shop: string) {
           group: issue.group,
           priority: issue.priority,
           action: issue.action,
+          why: WHY[issue.id] ?? "",
           destination: issue.destination,
           products: [],
         };
@@ -116,6 +134,13 @@ export async function catalogOverview(shop: string) {
         draft && draft.fingerprint === fingerprint(product) ? draft.id : null,
       liveCheckedAt: row.liveCheckedAt?.toISOString() ?? null,
       hasPublicUrl: !!report.publicUrl,
+      live: (!report.publicUrl
+        ? "none"
+        : !live
+          ? "unchecked"
+          : report.checks.some((c) => c.group === "visibility" && c.status === "action" && c.id !== "publication")
+            ? "issues"
+            : "ok") as LiveStatus,
     };
   });
   const activeProducts = products.filter((p) => p.status === "ACTIVE");
@@ -135,6 +160,11 @@ export async function catalogOverview(shop: string) {
     },
     products,
     fixPlan,
+    areas: areaKeys.map((key) => areas[key]),
+    attention: activeProducts
+      .filter((p) => p.actions > 0)
+      .sort((a, b) => a.readiness - b.readiness || b.actions - a.actions)
+      .slice(0, 5),
     signals: storeSignals(parseJson<StoreProfile>(store?.profile ?? null), live?.check ?? null),
     summary: {
       total: products.length,

@@ -3,34 +3,81 @@ import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
 import { context } from "../services/context.server";
 import { ensureStore } from "../services/catalog.server";
-import { catalogOverview } from "../services/geo.server";
+import { catalogOverview, type LiveStatus } from "../services/geo.server";
 import { seedDemo } from "../services/demo.server";
-import { AppLink, Badge, Icon, Meter, Notice, Priority, Thumb } from "../ui/common";
+import { AppLink, Badge, Icon, Mark, Meter, Notice, Priority, Thumb } from "../ui/common";
 import { JobPanels, ScanButton, useScan } from "../ui/jobs";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const ctx = await context(request);
   if (ctx.demo) await seedDemo();
   else await ensureStore(ctx.shop);
-  const { products, store } = await catalogOverview(ctx.shop);
-  return { products, store, demo: ctx.demo };
+  const { products, store, summary } = await catalogOverview(ctx.shop);
+  return { products, store, summary, demo: ctx.demo };
 }
 
 const PAGE_SIZES = [10, 25, 50, 100];
 type Row = Awaited<ReturnType<typeof loader>>["products"][number];
+type Sort = "attention" | "readiness" | "readiness-desc" | "title" | "title-desc";
 const FILTERS: [string, string, (p: Row) => boolean][] = [
   ["all", "All products", () => true],
   ["fixes", "Needs fixes", (p) => p.actions > 0],
   ["drafts", "Draft ready", (p) => !!p.draft],
   ["ready", "Ready", (p) => !p.actions && !p.unknown],
 ];
+const LIVE: Record<LiveStatus, { label: string; mark: "pass" | "high" | "unknown" | null }> = {
+  ok: { label: "Passing", mark: "pass" },
+  issues: { label: "Issues", mark: "high" },
+  unchecked: { label: "Not checked", mark: "unknown" },
+  none: { label: "No page", mark: null },
+};
+const COMPARE: Record<Sort, (a: Row, b: Row) => number> = {
+  attention: (a, b) =>
+    Number(!!b.draft) - Number(!!a.draft) ||
+    Number(b.status === "ACTIVE") - Number(a.status === "ACTIVE") ||
+    a.readiness - b.readiness ||
+    a.title.localeCompare(b.title),
+  readiness: (a, b) => a.readiness - b.readiness || a.title.localeCompare(b.title),
+  "readiness-desc": (a, b) => b.readiness - a.readiness || a.title.localeCompare(b.title),
+  title: (a, b) => a.title.localeCompare(b.title),
+  "title-desc": (a, b) => b.title.localeCompare(a.title),
+};
+
+function SortHeader({
+  label,
+  field,
+  sort,
+  onSort,
+}: {
+  label: string;
+  field: "title" | "readiness";
+  sort: Sort;
+  onSort: (sort: Sort) => void;
+}) {
+  const active = sort === field || sort === `${field}-desc`;
+  const descending = sort === `${field}-desc`;
+  return (
+    <th scope="col" aria-sort={active ? (descending ? "descending" : "ascending") : "none"}>
+      <button
+        type="button"
+        className={`sort-button${active ? " active" : ""}`}
+        onClick={() => onSort(active && !descending ? (`${field}-desc` as Sort) : field)}
+      >
+        {label}
+        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true" className={descending ? "desc" : ""}>
+          <path d="M5 2 8 6H2z" fill="currentColor" />
+        </svg>
+      </button>
+    </th>
+  );
+}
 
 export default function Products() {
-  const { products, store } = useLoaderData<typeof loader>();
+  const { products, store, summary } = useLoaderData<typeof loader>();
   const scan = useScan(store);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
-  const [sort, setSort] = useState("attention");
+  const [sort, setSort] = useState<Sort>("attention");
   const [pageSize, setPageSize] = useState(50);
   const [requestedPage, setPage] = useState(0);
   const counts = useMemo(
@@ -41,33 +88,28 @@ export default function Products() {
     const query = search.trim().toLowerCase();
     const test = FILTERS.find(([key]) => key === filter)![2];
     return products
-      .filter(
-        (p) =>
-          `${p.title} ${p.productType} ${p.category ?? ""}`.toLowerCase().includes(query) &&
-          test(p),
-      )
-      .sort((a, b) =>
-        sort === "title"
-          ? a.title.localeCompare(b.title)
-          : sort === "readiness"
-            ? a.readiness - b.readiness || a.title.localeCompare(b.title)
-            : Number(!!b.draft) - Number(!!a.draft) ||
-              Number(b.status === "ACTIVE") - Number(a.status === "ACTIVE") ||
-              a.readiness - b.readiness ||
-              a.title.localeCompare(b.title),
-      );
+      .filter((p) => `${p.title} ${p.productType} ${p.category ?? ""}`.toLowerCase().includes(query) && test(p))
+      .sort(COMPARE[sort]);
   }, [products, search, filter, sort]);
   const pageCount = Math.max(1, Math.ceil(visible.length / pageSize));
   const page = Math.min(requestedPage, pageCount - 1);
   const shown = visible.slice(page * pageSize, (page + 1) * pageSize);
   const reset = () => setPage(0);
+  const onSort = (next: Sort) => {
+    setSort(next);
+    reset();
+  };
 
   return (
     <>
       <div className="page-heading">
         <div>
           <h1>Products</h1>
-          <p>Readiness, next fix and specification coverage for every product.</p>
+          <p>
+            {products.length
+              ? `${summary.total} products · average readiness ${summary.readiness} · ${summary.needsWork} active need fixes`
+              : "Readiness, next fix and specification coverage for every product."}
+          </p>
         </div>
         <div className="page-actions">
           <ScanButton scan={scan} primary={!products.length} />
@@ -76,8 +118,7 @@ export default function Products() {
       <JobPanels scan={scan} />
       {!scan.running && store.syncStarted && (
         <Notice tone="info">
-          Scan paused after {products.length} imported products. Select Continue scan to
-          import the rest.
+          Scan paused after {products.length} imported products. Select Continue scan to import the rest.
         </Notice>
       )}
       <section className="card" id="catalog" aria-label="Product catalog">
@@ -115,17 +156,17 @@ export default function Products() {
                   }}
                 />
               </label>
-              <select
-                aria-label="Sort products"
-                value={sort}
-                onChange={(e) => {
-                  setSort(e.target.value);
-                  reset();
-                }}
-              >
+              {search && (
+                <button type="button" className="button quiet compact" onClick={() => setSearch("")}>
+                  Clear
+                </button>
+              )}
+              <select aria-label="Sort products" value={sort} onChange={(e) => onSort(e.target.value as Sort)}>
                 <option value="attention">Needs attention first</option>
                 <option value="readiness">Lowest readiness</option>
+                <option value="readiness-desc">Highest readiness</option>
                 <option value="title">Product name A–Z</option>
+                <option value="title-desc">Product name Z–A</option>
               </select>
             </div>
           </div>
@@ -136,26 +177,35 @@ export default function Products() {
               <caption className="sr-only">Products and their GEO readiness</caption>
               <thead>
                 <tr>
-                  <th scope="col">Product</th>
-                  <th scope="col">Readiness</th>
+                  <SortHeader label="Product" field="title" sort={sort} onSort={onSort} />
+                  <SortHeader label="Readiness" field="readiness" sort={sort} onSort={onSort} />
                   <th scope="col">Next fix</th>
-                  <th scope="col" className="specs-col">Specifications</th>
-                  <th scope="col">
-                    <span className="sr-only">Action</span>
+                  <th scope="col" className="live-col">
+                    Live page
+                  </th>
+                  <th scope="col" className="specs-col">
+                    Specs
+                  </th>
+                  <th scope="col" className="chevron-col">
+                    <span className="sr-only">Open</span>
                   </th>
                 </tr>
               </thead>
               <tbody className="stagger">
                 {shown.map((product) => (
-                  <tr key={product.recordId}>
+                  <tr key={product.recordId} className={product.status === "ACTIVE" ? undefined : "inactive"}>
                     <td>
-                      <AppLink to={`/app/products/${product.recordId}`} className="product-name">
+                      {/* Stretched link: the whole row opens the product. */}
+                      <AppLink
+                        to={`/app/products/${product.recordId}${product.draft ? "#draft" : ""}`}
+                        className="product-name"
+                      >
                         <Thumb image={product.image} />
                         <span>
                           <strong>{product.title}</strong>
                           <small>
-                            {product.category || product.productType || "Uncategorized"} ·{" "}
-                            {product.status.toLowerCase()}
+                            {product.category || product.productType || "Uncategorized"}
+                            {product.status !== "ACTIVE" && ` · ${product.status.toLowerCase()}`}
                           </small>
                         </span>
                       </AppLink>
@@ -178,23 +228,32 @@ export default function Products() {
                           ) : (
                             <Priority level={product.top.priority} />
                           )}
-                          <span>{product.top.label}</span>
+                          <span>
+                            {product.top.label}
+                            {product.actions > 1 ? ` · +${product.actions - 1} more` : ""}
+                          </span>
                         </span>
                       ) : (
                         <Badge tone="success">Ready</Badge>
                       )}
                     </td>
-                    <td className="specs-col num">
-                      {product.specs.found} / {product.specs.total}
+                    <td className="live-col">
+                      <span className="live-status">
+                        {LIVE[product.live].mark ? (
+                          <Mark kind={LIVE[product.live].mark!} />
+                        ) : (
+                          <span className="dash" aria-hidden="true">
+                            —
+                          </span>
+                        )}
+                        {LIVE[product.live].label}
+                      </span>
                     </td>
-                    <td>
-                      <AppLink
-                        to={`/app/products/${product.recordId}${product.draft ? "#draft" : ""}`}
-                        className="button compact"
-                        label={`${product.draft ? "Review draft for" : "Open"} ${product.title}`}
-                      >
-                        {product.draft ? "Review draft" : "Open"}
-                      </AppLink>
+                    <td className="specs-col num">
+                      {product.specs.found}/{product.specs.total}
+                    </td>
+                    <td className="chevron-col" aria-hidden="true">
+                      <Icon name="arrow" size={15} />
                     </td>
                   </tr>
                 ))}
@@ -254,12 +313,7 @@ export default function Products() {
               </label>
               {pageCount > 1 && (
                 <nav className="pagination" aria-label="Catalog pages">
-                  <button
-                    type="button"
-                    className="button compact"
-                    disabled={page === 0}
-                    onClick={() => setPage(page - 1)}
-                  >
+                  <button type="button" className="button compact" disabled={page === 0} onClick={() => setPage(page - 1)}>
                     Previous
                   </button>
                   <span className="num">

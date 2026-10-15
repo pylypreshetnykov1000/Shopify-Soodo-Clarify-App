@@ -2566,6 +2566,410 @@ th:last-child {
   }
 }
 
+/* ------------------------------------------------------ overview layout */
+
+.next-step-score {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-right: 24px;
+  margin-right: 4px;
+  border-right: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.next-step-score > span {
+  display: flex;
+  flex-direction: column;
+}
+.next-step-score strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.next-step-score small {
+  white-space: nowrap;
+}
+.next-step-copy {
+  flex: 1;
+  min-width: 0;
+}
+.area-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.area-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  transition:
+    border-color var(--fast) var(--ease),
+    transform var(--base) var(--ease),
+    box-shadow var(--base) var(--ease);
+}
+.area-tile:hover {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(28, 28, 26, 0.06);
+}
+.area-tile .stat-value {
+  margin-top: 0;
+}
+.area-tile .meter {
+  flex: none;
+  width: 100%;
+}
+.area-tile .stat-note {
+  margin-top: 0;
+}
+.area-tile > svg {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  color: var(--faint);
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    opacity var(--fast) var(--ease),
+    transform var(--base) var(--ease);
+}
+.area-tile:hover > svg,
+.area-tile:focus-visible > svg {
+  opacity: 1;
+  transform: none;
+}
+.impact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.impact-bar {
+  position: relative;
+  width: 56px;
+  height: 4px;
+  background: var(--surface-3);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.impact-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ink-2);
+  transform-origin: left;
+  animation: grow 600ms var(--ease) both;
+}
+.rows > li:has(> .attention-link) {
+  padding: 0;
+}
+.attention-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 20px;
+  transition: background-color var(--fast) var(--ease);
+}
+.attention-link:hover {
+  background: var(--surface-2);
+}
+.attention-link:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.attention-link .score {
+  width: 120px;
+  flex-shrink: 0;
+}
+.healthy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 14px 20px 16px;
+  border-top: 1px solid var(--line);
+}
+.card-heading + .healthy {
+  border-top: 0;
+}
+.healthy-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-size: 12px;
+  color: var(--ink-2);
+  background: var(--surface-2);
+}
+.healthy-chip svg {
+  color: var(--pass);
+}
+.activity-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  flex-shrink: 0;
+}
+.empty.compact {
+  padding: 24px 20px;
+  text-align: left;
+}
+.empty.compact p {
+  margin: 0;
+}
+
+/* -------------------------------------------------------- product table */
+
+.product-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  transition: color var(--fast) var(--ease);
+}
+.sort-button svg {
+  opacity: 0;
+  transition:
+    opacity var(--fast) var(--ease),
+    transform var(--base) var(--ease);
+}
+.sort-button:hover,
+.sort-button.active {
+  color: var(--ink);
+}
+.sort-button:hover svg {
+  opacity: 0.45;
+}
+.sort-button.active svg {
+  opacity: 1;
+}
+.sort-button svg.desc {
+  transform: rotate(180deg);
+}
+/* The product link stretches across its row, so the whole row is a target. */
+.product-table tbody tr {
+  position: relative;
+}
+.product-table .product-name::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.product-table tbody tr:focus-within {
+  background: var(--surface-2);
+}
+.product-table .product-name:focus-visible {
+  outline: none;
+}
+.product-table tbody tr:has(.product-name:focus-visible) {
+  box-shadow: inset 2px 0 0 var(--focus);
+}
+.product-table tr.inactive td {
+  color: var(--muted);
+}
+.product-table tr.inactive .thumb {
+  opacity: 0.6;
+}
+.chevron-col {
+  width: 40px;
+  color: var(--faint);
+}
+.chevron-col svg {
+  transition:
+    transform var(--base) var(--ease),
+    color var(--fast) var(--ease);
+}
+.product-table tbody tr:hover .chevron-col svg {
+  transform: translateX(3px);
+  color: var(--ink);
+}
+.live-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.dash {
+  width: 8px;
+  color: var(--faint);
+  text-align: center;
+}
+
+/* ------------------------------------------------------------ fix plan */
+
+.fix-trigger,
+.fix-head {
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) 130px 150px 16px;
+  align-items: center;
+  gap: 16px;
+}
+.fix-trigger {
+  padding: 14px 20px;
+}
+.fix-trigger .row-main small {
+  margin-top: 2px;
+}
+.fix-head {
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 11.5px;
+  color: var(--muted);
+  font-weight: 560;
+}
+.fix-area {
+  font-size: 12px;
+  color: var(--muted);
+}
+.fix-body {
+  padding: 2px 20px 18px 48px;
+}
+.fix-how {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 24px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.fix-how p {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.fix-how .eyebrow,
+.fix-body > .eyebrow {
+  display: block;
+}
+.priority-filter {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: var(--surface);
+  font-size: 12.5px;
+  color: var(--ink-2);
+  transition:
+    border-color var(--fast) var(--ease),
+    background-color var(--fast) var(--ease);
+}
+.chip:hover {
+  border-color: #b9b8b1;
+}
+.chip[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+.chip .count {
+  font-size: 11px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.chip[aria-pressed="true"] .count {
+  color: rgba(255, 255, 255, 0.7);
+}
+.store-fixes {
+  box-shadow: inset 3px 0 0 var(--medium);
+}
+
+@media (max-width: 1100px) {
+  .area-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .fix-trigger,
+  .fix-head {
+    grid-template-columns: 12px minmax(0, 1fr) 150px 16px;
+  }
+  .fix-area,
+  .fix-head span:nth-child(3) {
+    display: none;
+  }
+}
+@media (max-width: 1000px) {
+  .product-table .live-col {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .next-step-score {
+    border-right: 0;
+    padding: 0 0 14px;
+    margin: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .area-grid {
+    gap: 8px;
+  }
+  .area-tile {
+    padding: 12px 14px;
+  }
+  .fix-head {
+    display: none;
+  }
+  .fix-trigger {
+    grid-template-columns: 12px minmax(0, 1fr) 16px;
+    padding: 12px 14px;
+  }
+  .fix-trigger .impact {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .fix-body {
+    padding: 0 14px 14px;
+  }
+  .fix-how {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .attention-link {
+    padding: 10px 14px;
+  }
+  .rows .impact-bar {
+    display: none;
+  }
+  .attention-link .score {
+    width: 80px;
+  }
+  .healthy {
+    padding: 12px 14px 14px;
+  }
+  .product-table td.chevron-col {
+    display: none;
+  }
+  .product-table th.chevron-col {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
