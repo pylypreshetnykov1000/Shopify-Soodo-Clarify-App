@@ -23,6 +23,7 @@ export async function seedDemo() {
       syncedAt: new Date(),
       profile: JSON.stringify(demoStore),
       profileAt: new Date(),
+      snapshots: { create: demoHistory() },
       products: {
         create: demoProducts.map((product) => ({
           gid: product.id,
@@ -57,6 +58,20 @@ async function demoRow(gid: string) {
     where: { shop_gid: { shop: DEMO_SHOP, gid } },
   });
   return record && !record.deleted ? record : null;
+}
+/**
+ * Sample history for the demo's readiness trend: a few weeks of gradual
+ * fixes. Real stores only ever show readings Soodo recorded.
+ */
+function demoHistory(now = new Date()) {
+  const readings: [daysAgo: number, readiness: number, ready: number, fixes: number][] = [
+    [27, 58, 0, 12], [25, 61, 0, 12], [22, 64, 0, 11], [19, 66, 0, 11], [16, 70, 0, 10],
+    [13, 72, 0, 9], [10, 75, 0, 9], [7, 77, 0, 8], [4, 79, 0, 8], [2, 80, 0, 8],
+  ];
+  return readings.map(([daysAgo, readiness, ready, fixes]) => {
+    const date = new Date(now.getTime() - daysAgo * 86_400_000);
+    return { day: date.toISOString().slice(0, 10), createdAt: date, readiness, ready, active: 3, fixes };
+  });
 }
 export function demoAdapter(): CatalogAdapter {
   return {

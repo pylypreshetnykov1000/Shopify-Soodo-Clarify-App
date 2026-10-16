@@ -12,7 +12,7 @@ import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 
 import { context } from "../services/context.server";
-import { AppLink, Icon, type IconName } from "../ui/common";
+import { AppLink, Icon, Logo, type IconName } from "../ui/common";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const ctx = await context(request);
@@ -67,6 +67,7 @@ export default function App() {
       </span>
       <aside className="sidebar">
         <AppLink to="/app" className="brand" label="Soodo GEO home">
+          <Logo />
           Soodo <span className="brand-tag">GEO</span>
         </AppLink>
         <nav aria-label="Main navigation">

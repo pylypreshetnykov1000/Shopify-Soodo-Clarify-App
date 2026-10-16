@@ -6,11 +6,11 @@ import { context } from "../services/context.server";
 import { ensureStore } from "../services/catalog.server";
 import { catalogOverview } from "../services/geo.server";
 import { seedDemo } from "../services/demo.server";
+import { readinessTrend } from "../services/snapshots.server";
 import { GROUPS } from "../core/geo";
 import {
   AppLink,
   Badge,
-  Dial,
   formatDate,
   Icon,
   Mark,
@@ -21,13 +21,14 @@ import {
   Thumb,
 } from "../ui/common";
 import { CountUp, Steps, type StepState } from "../ui/motion";
+import { Distribution, TrendChart } from "../ui/charts";
 import { JobPanels, LiveButton, ScanButton, useLiveChecks, useScan } from "../ui/jobs";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const ctx = await context(request);
   if (ctx.demo) await seedDemo();
   else await ensureStore(ctx.shop);
-  const [overview, changes] = await Promise.all([
+  const [overview, changes, trend] = await Promise.all([
     catalogOverview(ctx.shop),
     db.change.findMany({
       where: { product: { shop: ctx.shop } },
@@ -35,9 +36,24 @@ export async function loader({ request }: LoaderFunctionArgs) {
       take: 4,
       select: { id: true, status: true, createdAt: true, product: { select: { id: true, title: true } } },
     }),
+    readinessTrend(ctx.shop),
   ]);
+  // End the line at today's live figure so the chart always agrees with the
+  // hero, even before today's reading has been saved.
+  const today = new Date().toISOString().slice(0, 10);
+  const current = {
+    day: today,
+    readiness: overview.summary.readiness,
+    ready: overview.summary.ready,
+    active: overview.summary.active,
+    fixes: overview.fixPlan.length,
+  };
+  const series = overview.summary.active
+    ? [...trend.filter((p) => p.day !== today), current]
+    : trend;
   return {
     ...overview,
+    trend: series,
     changes: changes.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() })),
     demo: ctx.demo,
   };
@@ -52,6 +68,18 @@ const CHANGE_LABEL: Record<string, string> = {
   FAILED: "Publish failed",
   CONFLICT: "Stopped: product changed",
 };
+const shortDay = (day: string) =>
+  new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+
+/** Change in readiness across the readings of the last 30 days. */
+function delta(trend: Data["trend"]) {
+  if (trend.length < 2) return null;
+  const end = trend[trend.length - 1];
+  const cutoff = new Date(Date.parse(`${end.day}T00:00:00Z`) - 30 * 86_400_000).toISOString().slice(0, 10);
+  const start = trend.find((p) => p.day >= cutoff) ?? trend[0];
+  if (start === end) return null;
+  return { points: end.readiness - start.readiness, since: start.day };
+}
 
 export default function Overview() {
   const data = useLoaderData<typeof loader>();
@@ -64,9 +92,10 @@ export default function Overview() {
   const liveDone = liveRelevant && summary.liveChecked >= summary.liveCheckable;
   const syncedAt = formatDate(store.syncedAt);
   const busy = scan.running || live.running;
+  const change = delta(data.trend);
 
   const runButton = (label: string, onClick: () => void, running: boolean) => (
-    <button type="button" className="button primary" onClick={onClick} disabled={busy} aria-busy={running}>
+    <button type="button" className="button on-dark" onClick={onClick} disabled={busy} aria-busy={running}>
       {running && <Spinner />}
       {running ? "Working..." : label}
       {!running && <Icon name="arrow" size={15} />}
@@ -95,6 +124,7 @@ export default function Overview() {
   ];
   const healthy = data.signals.filter((s) => s.status === "pass");
   const signalIssues = data.signals.filter((s) => s.status !== "pass");
+  const activeReadiness = data.products.filter((p) => p.status === "ACTIVE").map((p) => p.readiness);
 
   return (
     <>
@@ -108,10 +138,8 @@ export default function Overview() {
         </div>
         {hasProducts && (
           <div className="page-actions">
-            {/* The next-step card already offers its own action; avoid a duplicate. */}
-            {next.kind !== "live" && (
-              <LiveButton live={live} disabled={scan.running || !summary.liveCheckable} />
-            )}
+            {/* The hero already offers its own action; avoid a duplicate. */}
+            {next.kind !== "live" && <LiveButton live={live} disabled={scan.running || !summary.liveCheckable} />}
             {next.kind !== "scan" && <ScanButton scan={scan} />}
           </div>
         )}
@@ -121,30 +149,46 @@ export default function Overview() {
         <Notice tone="info">Products changed in Shopify since the last scan. Scan again to refresh these results.</Notice>
       )}
 
-      <section className="card next-step" aria-labelledby="next-step-title">
-        <div className="next-step-main">
-          {hasProducts && (
-            <div className="next-step-score">
-              <Dial value={summary.readiness} label="Catalog readiness" />
-              <span>
-                <strong>Readiness</strong>
-                <small>
-                  {summary.ready} of {summary.active} fully ready
-                </small>
-              </span>
-            </div>
+      <section className="brand-hero" aria-labelledby="next-step-title">
+        <svg className="hero-mark" viewBox="0 0 200 200" aria-hidden="true">
+          <circle cx="92" cy="108" r="58" fill="none" stroke="currentColor" strokeWidth="18" />
+          <circle cx="152" cy="48" r="18" fill="currentColor" />
+        </svg>
+        <div className="hero-figure">
+          <span className="hero-eyebrow">Catalog readiness</span>
+          {hasProducts ? (
+            <>
+              <p className="hero-number">
+                <CountUp value={summary.readiness} />
+                <span>%</span>
+              </p>
+              <p className="hero-sub">
+                {change ? (
+                  <>
+                    <span className={`delta ${change.points >= 0 ? "up" : "down"}`}>
+                      {change.points >= 0 ? "▲" : "▼"} {Math.abs(change.points)} pts
+                    </span>{" "}
+                    since {shortDay(change.since)}
+                  </>
+                ) : (
+                  `${summary.ready} of ${summary.active} active products fully ready`
+                )}
+              </p>
+            </>
+          ) : (
+            <p className="hero-number empty">—</p>
           )}
-          <div className="next-step-copy">
-            <span className="eyebrow">Next step</span>
-            <h2 id="next-step-title">{next.title}</h2>
-            <p>{next.detail}</p>
-          </div>
-          {next.action}
         </div>
-        <div className="steps-wrap">
-          <Steps steps={steps} label="Setup progress" />
+        <div className="hero-next">
+          <span className="hero-eyebrow">Next step</span>
+          <h2 id="next-step-title">{next.title}</h2>
+          <p>{next.detail}</p>
+          <div className="hero-action">{next.action}</div>
         </div>
       </section>
+      <div className="steps-card">
+        <Steps steps={steps} label="Setup progress" />
+      </div>
 
       {hasProducts && (
         <>
@@ -152,7 +196,12 @@ export default function Overview() {
             {data.areas.map((area) => {
               const pct = area.total ? Math.round((area.passing / area.total) * 100) : 0;
               return (
-                <AppLink key={area.group} to={`/app/fixes?area=${area.group}`} className="area-tile" label={`${GROUPS[area.group].label}: ${pct}% of products pass`}>
+                <AppLink
+                  key={area.group}
+                  to={`/app/fixes?area=${area.group}`}
+                  className="area-tile"
+                  label={`${GROUPS[area.group].label}: ${pct}% of products pass`}
+                >
                   <span className="stat-label">{GROUPS[area.group].label}</span>
                   <strong className="stat-value">
                     {area.total ? (
@@ -167,7 +216,7 @@ export default function Overview() {
                   <Meter value={pct} label={`${GROUPS[area.group].label} products passing`} />
                   <span className="stat-note">
                     {area.total
-                      ? `${area.passing} of ${area.total} products pass${area.issues ? ` · ${area.issues} issue${area.issues === 1 ? "" : "s"}` : ""}`
+                      ? `${area.passing} of ${area.total} pass${area.issues ? ` · ${area.issues} issue${area.issues === 1 ? "" : "s"}` : ""}`
                       : "Not checked yet"}
                   </span>
                   <Icon name="arrow" size={14} />
@@ -175,6 +224,44 @@ export default function Overview() {
               );
             })}
           </section>
+
+          <div className="chart-row">
+            <section className="card" aria-labelledby="trend-title">
+              <div className="card-heading flush">
+                <div>
+                  <h2 id="trend-title">Readiness over time</h2>
+                  <p>One reading per day, saved after scans, live checks and published changes.</p>
+                </div>
+              </div>
+              <div className="chart-body">
+                {data.trend.length > 1 ? (
+                  <TrendChart points={data.trend} label="Catalog readiness over time" />
+                ) : (
+                  <div className="chart-empty">
+                    <TrendChart points={data.trend} label="Catalog readiness over time" />
+                    <p>
+                      Your trend starts {data.trend.length ? "today" : "with your next scan"}. Each day you scan, check
+                      live pages or publish a change adds a point.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </section>
+            <section className="card" aria-labelledby="distribution-title">
+              <div className="card-heading flush">
+                <div>
+                  <h2 id="distribution-title">Products by readiness</h2>
+                  <p>
+                    {summary.active} active product{summary.active === 1 ? "" : "s"}, so a high average can’t hide weak
+                    ones.
+                  </p>
+                </div>
+              </div>
+              <div className="chart-body">
+                <Distribution values={activeReadiness} />
+              </div>
+            </section>
+          </div>
 
           <div className="grid-2">
             <section className="card" aria-labelledby="top-fixes">
@@ -318,17 +405,17 @@ export default function Overview() {
               </div>
               {data.changes.length ? (
                 <ul className="rows stagger">
-                  {data.changes.map((change) => (
-                    <li key={change.id}>
+                  {data.changes.map((item) => (
+                    <li key={item.id}>
                       <span className="activity-dot" aria-hidden="true" />
                       <div className="row-main">
-                        <strong>{change.product.title}</strong>
+                        <strong>{item.product.title}</strong>
                         <small>
-                          {CHANGE_LABEL[change.status] ?? change.status.toLowerCase().replace(/_/g, " ")} ·{" "}
-                          {formatDate(change.createdAt)}
+                          {CHANGE_LABEL[item.status] ?? item.status.toLowerCase().replace(/_/g, " ")} ·{" "}
+                          {formatDate(item.createdAt)}
                         </small>
                       </div>
-                      {!["PUBLISHED", "RESTORED"].includes(change.status) && <Badge tone="warning">Check</Badge>}
+                      {!["PUBLISHED", "RESTORED"].includes(item.status) && <Badge tone="warning">Check</Badge>}
                     </li>
                   ))}
                 </ul>
@@ -355,9 +442,9 @@ function nextStep(
   if (!summary.total)
     return {
       kind: "scan",
-      title: "Import your catalog",
+      title: "Get your products found",
       detail:
-        "Read-only. Soodo imports products, variants, categories and store policies, then checks what search engines and AI assistants can learn from them.",
+        "Start with a read-only scan. Soodo imports products, variants, categories and store policies, then checks what search engines and AI assistants can learn from them.",
       action: run.scan("Scan catalog"),
     };
   if (store.syncStarted)
@@ -390,7 +477,7 @@ function nextStep(
       title: `Review the draft for ${draft.title}`,
       detail: "A description update is waiting for your approval. Nothing changes until you publish it.",
       action: (
-        <AppLink to={`/app/products/${draft.recordId}#draft`} className="button primary">
+        <AppLink to={`/app/products/${draft.recordId}#draft`} className="button on-dark">
           Review draft <Icon name="arrow" size={15} />
         </AppLink>
       ),
@@ -404,7 +491,7 @@ function nextStep(
       action: (
         <AppLink
           to={top.products.length === 1 ? `/app/products/${top.products[0].recordId}` : `/app/fixes#${top.id}`}
-          className="button primary"
+          className="button on-dark"
         >
           Start fixing <Icon name="arrow" size={15} />
         </AppLink>

@@ -3,6 +3,7 @@ import { redirect } from "react-router";
 import db from "../db.server";
 import { context } from "../services/context.server";
 import { syncPage } from "../services/catalog.server";
+import { recordSnapshot } from "../services/snapshots.server";
 
 export const loader = () => redirect("/app");
 
@@ -18,6 +19,7 @@ export async function action({ request }: ActionFunctionArgs) {
     );
     const store = await db.store.findUniqueOrThrow({ where: { shop: ctx.shop } });
     const done = !store.syncStarted;
+    if (done) await recordSnapshot(ctx.shop);
     const imported = await db.catalogProduct.count({
       where: done
         ? { shop: ctx.shop, deleted: false }

@@ -10,6 +10,7 @@ import {
 import db from "../db.server";
 import { context } from "../services/context.server";
 import { restoreChange, verifyChange } from "../services/catalog.server";
+import { recordSnapshot } from "../services/snapshots.server";
 import { AppLink, Badge, formatDate, Icon, Notice, Spinner } from "../ui/common";
 import { previewText } from "../core/catalog";
 
@@ -54,10 +55,9 @@ export async function action({ request }: ActionFunctionArgs) {
         throw new Error(
           "Confirm that you want to restore the previous description.",
         );
-      return {
-        ok: true,
-        message: await restoreChange(ctx.shop, id, ctx.adapter),
-      };
+      const message = await restoreChange(ctx.shop, id, ctx.adapter);
+      await recordSnapshot(ctx.shop);
+      return { ok: true, message };
     }
     throw new Error("Unknown action.");
   } catch (error) {

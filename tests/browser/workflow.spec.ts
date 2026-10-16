@@ -374,7 +374,7 @@ test("legacy data is marked not checked until a scan collects it, and old GEO li
 
 test("the overview guides the next step and tabs support the keyboard", async ({ page }) => {
   await page.goto("/app");
-  const next = page.locator(".next-step");
+  const next = page.locator(".brand-hero");
   await expect(next.getByText("Next step", { exact: true })).toBeVisible();
   const progress = page.getByRole("list", { name: "Setup progress" });
   await expect(progress.locator("li")).toHaveCount(3);
@@ -392,10 +392,16 @@ test("the overview guides the next step and tabs support the keyboard", async ({
   await expect(checks).toHaveAttribute("aria-selected", "true");
   // Exactly one check opens at a time; closed details cannot be focused.
   const triggers = page.locator(".check-trigger");
-  await expect(triggers.first()).toHaveAttribute("aria-expanded", "true");
-  await triggers.nth(1).click();
-  await expect(triggers.nth(1)).toHaveAttribute("aria-expanded", "true");
-  await expect(triggers.first()).toHaveAttribute("aria-expanded", "false");
+  const open = page.locator('.check-trigger[aria-expanded="true"]');
+  await expect(open).toHaveCount(1);
+  // The default is an actionable fix, never a "not checked" row.
+  await expect(open).not.toContainText("Not checked");
+  const opened = (await open.getAttribute("aria-controls"))!;
+  const other = triggers.and(page.locator(`:not([aria-controls="${opened}"])`)).first();
+  await other.click();
+  await expect(other).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator(`[aria-controls="${opened}"]`)).toHaveAttribute("aria-expanded", "false");
+  await expect(open).toHaveCount(1);
   expect(await page.locator(".collapse:not(.open)").first().evaluate((el) => (el as HTMLElement).inert)).toBe(true);
 });
 
@@ -435,4 +441,30 @@ test("overview, products and fix plan connect through filters, sorting and whole
   // The stretched link covers the cell, so the click lands on the link.
   await page.locator("tbody tr").first().locator(".live-col").click({ force: true });
   await expect(page.getByRole("heading", { name: "Checks and next steps" })).toBeVisible();
+});
+
+test("the overview hero and charts show readiness, its trend and its spread", async ({ page }) => {
+  await page.goto("/app");
+  const hero = page.locator(".brand-hero");
+  await expect(hero.locator(".hero-number")).toHaveText(/^\d+%$/);
+  // The demo carries a few weeks of history, so the hero reports the change.
+  await expect(hero.locator(".delta")).toContainText("pts");
+  const trend = page.getByRole("img", { name: /^Catalog readiness over time:/ });
+  await expect(trend).toBeVisible();
+  // Every reading is also available as a table for assistive technology.
+  expect(await page.locator(".trend .sr-only table tbody tr").count()).toBeGreaterThanOrEqual(10);
+  // Keyboard users get the same tooltip as pointer users.
+  await trend.focus();
+  await expect(page.locator(".chart-tooltip")).toContainText("Readiness");
+  await page.keyboard.press("Home");
+  await expect(page.locator(".chart-tooltip")).toContainText("Readiness 58");
+  await trend.blur();
+  await expect(page.locator(".chart-tooltip")).toHaveCount(0);
+  // The distribution covers every active product exactly once.
+  const bands = page.getByRole("list", { name: "Active products by readiness band" }).locator("li");
+  await expect(bands).toHaveCount(4);
+  const total = (await bands.locator(".band-value").allTextContents()).reduce((sum, v) => sum + Number(v), 0);
+  expect(total).toBe(3);
+  // The favicon carries the brand mark.
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", /^data:image\/svg\+xml/);
 });

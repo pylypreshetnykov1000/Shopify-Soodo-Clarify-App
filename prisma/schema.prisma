@@ -46,6 +46,21 @@ model Store {
   profile     String?
   profileAt   DateTime?
   products    CatalogProduct[]
+  snapshots   ReadinessSnapshot[]
+}
+
+/// One readiness reading per store per UTC day, for the trend chart.
+model ReadinessSnapshot {
+  id        String   @id @default(cuid())
+  shop      String
+  day       String
+  createdAt DateTime @default(now())
+  readiness Int
+  ready     Int
+  active    Int
+  fixes     Int
+  store     Store    @relation(fields: [shop], references: [shop], onDelete: Cascade)
+  @@unique([shop, day])
 }
 
 model CatalogProduct {

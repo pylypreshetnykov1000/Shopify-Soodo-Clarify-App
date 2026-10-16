@@ -8,6 +8,7 @@ import {
 } from "react-router";
 
 import { login } from "../../shopify.server";
+import { Logo } from "../../ui/common";
 import { loginErrorMessage } from "./error.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
@@ -34,6 +35,7 @@ export default function Auth() {
   return (
     <main className="landing">
       <div className="brand">
+        <Logo size={26} />
         Soodo <span className="brand-tag">GEO</span>
       </div>
       <h1>Connect your store</h1>

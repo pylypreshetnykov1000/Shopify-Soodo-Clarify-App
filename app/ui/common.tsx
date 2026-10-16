@@ -38,6 +38,19 @@ export function AppLink({
     </Link>
   );
 }
+/** The Soodo mark: a lens (being seen) with a signal dot, on brand green. */
+export function Logo({ size = 22 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" className="logo">
+      <rect width="24" height="24" rx="3" fill="#1d5a44" />
+      <circle cx="11" cy="13" r="5.5" fill="none" stroke="#fff" strokeWidth="2.2" />
+      <circle cx="17.2" cy="6.8" r="2.2" fill="#9be0b8" />
+    </svg>
+  );
+}
+export const LOGO_DATA_URI = `data:image/svg+xml,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="3" fill="#1d5a44"/><circle cx="11" cy="13" r="5.5" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="17.2" cy="6.8" r="2.2" fill="#9be0b8"/></svg>',
+)}`;
 export function ExternalLink({
   href,
   children,

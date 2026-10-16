@@ -2,6 +2,7 @@ import type { ActionFunctionArgs } from "react-router";
 import { redirect } from "react-router";
 import { context } from "../services/context.server";
 import { checkNextLivePages } from "../services/live.server";
+import { recordSnapshot } from "../services/snapshots.server";
 
 export const loader = () => redirect("/app");
 
@@ -10,6 +11,7 @@ export async function action({ request }: ActionFunctionArgs) {
   const ctx = await context(request);
   try {
     const { checked, remaining } = await checkNextLivePages(ctx.shop, ctx.fetcher);
+    if (checked && !remaining) await recordSnapshot(ctx.shop);
     return {
       ok: true,
       done: remaining === 0,

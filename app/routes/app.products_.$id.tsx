@@ -18,6 +18,7 @@ import {
 } from "../services/catalog.server";
 import { productWorkspace } from "../services/geo.server";
 import { checkLivePage } from "../services/live.server";
+import { recordSnapshot } from "../services/snapshots.server";
 import {
   AppLink,
   Badge,
@@ -74,10 +75,9 @@ export async function action({ request, params }: ActionFunctionArgs) {
     if (intent === "publish") {
       if (form.get("approved") !== "yes")
         throw new Error("Approve the proposed change before publishing.");
-      return {
-        ok: true,
-        message: await publishDraft(ctx.shop, suggestionId, ctx.adapter),
-      };
+      const message = await publishDraft(ctx.shop, suggestionId, ctx.adapter);
+      await recordSnapshot(ctx.shop);
+      return { ok: true, message };
     }
     if (intent === "reject") {
       await rejectDraft(ctx.shop, suggestionId);
@@ -263,13 +263,15 @@ function DraftReview({ data, busy, pending }: { data: Data; busy: boolean; pendi
 
 function ChecksPanel({ data, busy, goTo }: { data: Data; busy: boolean; goTo: (tab: TabId) => void }) {
   const { report } = data;
-  const [openId, setOpenId] = useState<string | null>(report.issues[0]?.id ?? null);
-  const [showPassed, setShowPassed] = useState(false);
-  const passed = report.checks.filter((c) => c.status === "pass");
   const groupOrder = Object.keys(GROUPS) as CheckGroup[];
   const groups = groupOrder
     .map((group) => ({ group, checks: report.issues.filter((c) => c.group === group) }))
     .filter((g) => g.checks.length);
+  // Open the first actionable fix in on-screen order, not a "not checked" row.
+  const firstAction = groups.flatMap((g) => g.checks).find((c) => c.status === "action");
+  const [openId, setOpenId] = useState<string | null>(firstAction?.id ?? null);
+  const [showPassed, setShowPassed] = useState(false);
+  const passed = report.checks.filter((c) => c.status === "pass");
   const cta = (check: GeoCheck) =>
     check.destination === "facts" ? (
       <button type="button" className="button compact primary" onClick={() => goTo("specs")}>

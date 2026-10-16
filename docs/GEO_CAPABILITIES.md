@@ -53,6 +53,10 @@ Readiness is not a ranking and a full score does not guarantee indexing, recomme
 - [RFC 9309: Robots Exclusion Protocol](https://www.rfc-editor.org/rfc/rfc9309)
 - [Shopify Admin API 2026-10: Product](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/Product), [ProductVariant](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/ProductVariant), [TaxonomyCategory](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/TaxonomyCategory), [ShopPolicy](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/ShopPolicy)
 
+## Readiness history
+
+One reading per store per UTC day (readiness, fully ready products, active products, open fixes) is saved after a completed scan, a completed live-check batch, and each published or restored description. Later readings on the same day replace earlier ones. The Overview trend shows the last 90 days and ends at the current figure; nothing is backfilled for days before the first reading. History is deleted with the store on uninstall or shop redaction. The demo seeds a few weeks of sample readings.
+
 ## Deployment
 
-Run the PostgreSQL migration `20261016120000_geo_signals` (applied automatically by `npm run docker-start`), deploy the app configuration so merchants are asked for the new read scopes, then rescan stores to collect category, variant and policy data. Live Shopify installation, real storefront responses and throttling under load still need testing on a development store.
+Run the PostgreSQL migrations `20261016120000_geo_signals` and `20261017090000_readiness_snapshots` (applied automatically by `npm run docker-start`), deploy the app configuration so merchants are asked for the new read scopes, then rescan stores to collect category, variant and policy data. Live Shopify installation, real storefront responses and throttling under load still need testing on a development store.
