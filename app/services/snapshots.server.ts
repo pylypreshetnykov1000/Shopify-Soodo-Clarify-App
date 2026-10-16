@@ -9,19 +9,26 @@ const dayOf = (date: Date) => date.toISOString().slice(0, 10);
  * published changes, so the trend reflects real work, not page views.
  */
 export async function recordSnapshot(shop: string, now = new Date()) {
-  const { summary, fixPlan } = await catalogOverview(shop);
-  if (!summary.active) return null;
-  const data = {
-    readiness: summary.readiness,
-    ready: summary.ready,
-    active: summary.active,
-    fixes: fixPlan.length,
-  };
-  return db.readinessSnapshot.upsert({
-    where: { shop_day: { shop, day: dayOf(now) } },
-    create: { shop, day: dayOf(now), createdAt: now, ...data },
-    update: { createdAt: now, ...data },
-  });
+  // History is a side effect of real work: it must never turn a successful
+  // scan or publish into an error for the merchant.
+  try {
+    const { summary, fixPlan } = await catalogOverview(shop);
+    if (!summary.active) return null;
+    const data = {
+      readiness: summary.readiness,
+      ready: summary.ready,
+      active: summary.active,
+      fixes: fixPlan.length,
+    };
+    return await db.readinessSnapshot.upsert({
+      where: { shop_day: { shop, day: dayOf(now) } },
+      create: { shop, day: dayOf(now), createdAt: now, ...data },
+      update: { createdAt: now, ...data },
+    });
+  } catch (error) {
+    console.error(`Could not record readiness for ${shop}`, error);
+    return null;
+  }
 }
 
 /** Daily readings for the last `days` days, oldest first. */

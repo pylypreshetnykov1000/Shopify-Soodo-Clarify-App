@@ -54,3 +54,21 @@ test("the trend window excludes old readings, and stores without active products
   // Uninstall and shop redaction delete the store; its history goes with it.
   assert.equal(await db.readinessSnapshot.count({ where: { shop } }), 0);
 });
+
+test("a failure to record history never surfaces as an error", async () => {
+  const shop = await store();
+  const original = console.error;
+  let logged = false;
+  console.error = () => {
+    logged = true;
+  };
+  try {
+    // An invalid timestamp makes the write itself fail after the overview succeeds.
+    assert.equal(await recordSnapshot(shop, new Date(Number.NaN)), null);
+    assert.ok(logged, "the failure is logged for operators");
+    assert.equal(await db.readinessSnapshot.count({ where: { shop } }), 0);
+  } finally {
+    console.error = original;
+    await db.store.deleteMany({ where: { shop } });
+  }
+});

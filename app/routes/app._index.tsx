@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
 import db from "../db.server";
-import { context } from "../services/context.server";
+import { context, OPTIONAL_SCOPES } from "../services/context.server";
 import { ensureStore } from "../services/catalog.server";
 import { catalogOverview } from "../services/geo.server";
 import { seedDemo } from "../services/demo.server";
@@ -59,6 +59,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
     trend: series,
     changes: changes.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() })),
     demo: ctx.demo,
+    missingScopes: ctx.missingScopes.map(
+      (scope) => OPTIONAL_SCOPES[scope as keyof typeof OPTIONAL_SCOPES],
+    ),
   };
 }
 
@@ -148,6 +151,12 @@ export default function Overview() {
         )}
       </div>
       <JobPanels scan={scan} live={live} />
+      {data.missingScopes.length > 0 && (
+        <Notice tone="info">
+          Approve Soodo’s updated permissions in Shopify to check {data.missingScopes.join(" and ")}. Until then
+          those checks show as not checked; everything else works.
+        </Notice>
+      )}
       {!scan.running && !store.syncStarted && hasProducts && !store.syncedAt && (
         <Notice tone="info">Products changed in Shopify since the last scan. Scan again to refresh these results.</Notice>
       )}
@@ -218,7 +227,13 @@ export default function Overview() {
                   </strong>
                   <Meter value={pct} tone="brand" label={`${GROUPS[area.group].label} products passing`} />
                   <span className="area-note">
-                    {area.total ? `${area.passing} of ${area.total} products pass` : "Not checked yet"}
+                    {area.total
+                      ? `${area.passing} of ${area.total} products pass${area.pending ? ` · ${area.pending} pending` : ""}`
+                      : area.pending
+                        ? area.group === "visibility"
+                          ? "Run live checks to measure"
+                          : "Rescan to measure"
+                        : "Not checked yet"}
                     {area.issues > 0 && (
                       <span className="area-issues">
                         {area.issues} issue{area.issues === 1 ? "" : "s"}

@@ -68,8 +68,11 @@ export async function catalogOverview(shop: string) {
   const groups = new Map<string, FixGroup>();
   const areaKeys = Object.keys(GROUPS) as CheckGroup[];
   const areas = Object.fromEntries(
-    areaKeys.map((key) => [key, { group: key, passing: 0, total: 0, issues: 0 }]),
-  ) as Record<CheckGroup, { group: CheckGroup; passing: number; total: number; issues: number }>;
+    areaKeys.map((key) => [key, { group: key, passing: 0, total: 0, issues: 0, pending: 0 }]),
+  ) as Record<
+    CheckGroup,
+    { group: CheckGroup; passing: number; total: number; issues: number; pending: number }
+  >;
   let latestLive: { at: Date; check: LiveCheck } | null = null;
   const products = rows.map((row) => {
     const product = JSON.parse(row.payload) as ProductData;
@@ -84,12 +87,20 @@ export async function catalogOverview(shop: string) {
     // Inactive products are excluded from the fix plan; they are not for sale.
     if (active)
       for (const key of areaKeys) {
-        const known = report.checks.filter((c) => c.group === key && c.status !== "unknown");
-        if (!known.length) continue;
-        areas[key].total++;
-        const failing = known.filter((c) => c.status === "action").length;
-        if (!failing) areas[key].passing++;
-        areas[key].issues += failing;
+        // A product passes an area only when every check in it has run and
+        // passed. Known failures count at once; passes with checks still
+        // outstanding (live page, legacy data) are pending, not passing.
+        const checks = report.checks.filter((c) => c.group === key);
+        const failing = checks.filter((c) => c.status === "action").length;
+        const unknown = checks.filter((c) => c.status === "unknown").length;
+        if (failing) {
+          areas[key].total++;
+          areas[key].issues += failing;
+        } else if (unknown) areas[key].pending++;
+        else {
+          areas[key].total++;
+          areas[key].passing++;
+        }
       }
     if (active)
       for (const issue of report.issues.filter((c) => c.status === "action")) {

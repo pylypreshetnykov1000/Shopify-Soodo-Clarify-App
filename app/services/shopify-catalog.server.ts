@@ -18,11 +18,19 @@ export interface CatalogAdapter {
   count?(): Promise<number | null>;
 }
 export class WriteRejectedError extends Error {}
+/**
+ * Shopify refused a field or operation for lack of an access scope. A denied
+ * write did not happen, so it is also a rejected write.
+ */
+export class AccessDeniedError extends WriteRejectedError {}
 
 /** Products per scan request. Keeps the requested query cost well below 1,000. */
 export const PAGE_SIZE = 5;
 const REFERENCE = `... on Metaobject { displayName } ... on TaxonomyValue { name }`;
-export const PRODUCT_FIELDS = `fragment CatalogFields on Product {
+// Resolving category attribute values needs read_metaobjects. Without it the
+// scan still works; attributes are counted but their names are not read.
+const CATEGORY_REFERENCES = `categoryFields: metafields(first: 10, namespace: "shopify") { nodes { key reference { ${REFERENCE} } references(first: 5) { nodes { ${REFERENCE} } } } }`;
+const productFields = (references: boolean) => `fragment CatalogFields on Product {
   id title descriptionHtml productType status updatedAt
   vendor onlineStoreUrl seo { title description }
   category { id name fullName }
@@ -30,13 +38,14 @@ export const PRODUCT_FIELDS = `fragment CatalogFields on Product {
   mediaCount { count }
   variantsCount { count }
   variants(first: 10) { nodes { id title sku price compareAtPrice availableForSale barcodes(first: 1) { nodes { value } } } }
-  categoryFields: metafields(first: 10, namespace: "shopify") { nodes { key reference { ${REFERENCE} } references(first: 5) { nodes { ${REFERENCE} } } } }
+  ${references ? CATEGORY_REFERENCES : ""}
   metafields(first: 20) { nodes { namespace key value type } pageInfo { hasNextPage endCursor } }
 }`;
-export const PAGE_QUERY = `query CatalogPage($cursor: String) {
+const pageQuery = (references: boolean) => `query CatalogPage($cursor: String) {
   products(first: ${PAGE_SIZE}, after: $cursor, sortKey: ID) { nodes { ...CatalogFields } pageInfo { hasNextPage endCursor } }
-} ${PRODUCT_FIELDS}`;
-export const READ_QUERY = `query CatalogProduct($id: ID!) { product(id: $id) { ...CatalogFields } } ${PRODUCT_FIELDS}`;
+} ${productFields(references)}`;
+const readQuery = (references: boolean) =>
+  `query CatalogProduct($id: ID!) { product(id: $id) { ...CatalogFields } } ${productFields(references)}`;
 export const META_QUERY = `query CatalogMetafields($id: ID!, $cursor: String) {
   product(id: $id) { metafields(first: 100, after: $cursor) { nodes { namespace key value type } pageInfo { hasNextPage endCursor } } }
 }`;
@@ -92,6 +101,13 @@ async function graphql<T>(
     extensions?: GraphqlError["extensions"];
   };
   const throttled = json.errors?.some((e) => e.extensions?.code === "THROTTLED");
+  const denied = json.errors?.find(
+    (e) => e.extensions?.code === "ACCESS_DENIED" || /access denied/i.test(e.message),
+  );
+  if (denied)
+    throw new AccessDeniedError(
+      "Shopify has not granted Soodo the permission this needs. Open Soodo from your Shopify admin and approve the updated permissions, then try again.",
+    );
   if (throttled && attempt < 3) {
     // Wait for enough of the cost bucket to refill, bounded to keep requests short.
     const cost = json.extensions?.cost;
@@ -112,7 +128,22 @@ async function graphql<T>(
 }
 const referenceName = (ref: Reference) =>
   ref?.displayName?.trim() || ref?.name?.trim() || null;
-export function shopifyAdapter(admin: GraphqlClient): CatalogAdapter {
+export function shopifyAdapter(
+  admin: GraphqlClient,
+  options: { scopes?: string[] } = {},
+): CatalogAdapter {
+  // Ask for category attribute names only when the scope is granted, and
+  // fall back if Shopify still refuses (for example, before re-approval).
+  let references = options.scopes ? options.scopes.includes("read_metaobjects") : true;
+  async function withFallback<T>(run: (references: boolean) => Promise<T>) {
+    try {
+      return await run(references);
+    } catch (error) {
+      if (!(error instanceof AccessDeniedError) || !references) throw error;
+      references = false;
+      return run(false);
+    }
+  }
   async function normalize(raw: RawProduct): Promise<ProductData> {
     const metafields = [...raw.metafields.nodes];
     const seen = new Set<string>();
@@ -172,12 +203,14 @@ export function shopifyAdapter(admin: GraphqlClient): CatalogAdapter {
   }
   return {
     async page(cursor) {
-      const data = await graphql<{
-        products: {
-          nodes: RawProduct[];
-          pageInfo: { hasNextPage: boolean; endCursor: string | null };
-        };
-      }>(admin, PAGE_QUERY, { cursor });
+      const data = await withFallback((refs) =>
+        graphql<{
+          products: {
+            nodes: RawProduct[];
+            pageInfo: { hasNextPage: boolean; endCursor: string | null };
+          };
+        }>(admin, pageQuery(refs), { cursor }),
+      );
       const products: ProductData[] = [];
       for (const raw of data.products.nodes)
         products.push(await normalize(raw));
@@ -195,10 +228,8 @@ export function shopifyAdapter(admin: GraphqlClient): CatalogAdapter {
       };
     },
     async read(id) {
-      const data = await graphql<{ product: RawProduct | null }>(
-        admin,
-        READ_QUERY,
-        { id },
+      const data = await withFallback((refs) =>
+        graphql<{ product: RawProduct | null }>(admin, readQuery(refs), { id }),
       );
       return data.product ? normalize(data.product) : null;
     },

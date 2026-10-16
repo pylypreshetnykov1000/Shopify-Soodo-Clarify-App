@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  AccessDeniedError,
   shopifyAdapter,
   WriteRejectedError,
   type GraphqlClient,
@@ -224,4 +225,49 @@ test("repeated cursors are rejected instead of looping forever", async () => {
     ]),
   );
   await assert.rejects(page.page("same"), /invalid pagination/);
+});
+function recording(results: unknown[]) {
+  const queries: string[] = [];
+  const graphqlClient: GraphqlClient = {
+    async graphql(query) {
+      queries.push(query);
+      if (!results.length) throw new Error("Unexpected extra GraphQL request");
+      return Response.json(results.shift());
+    },
+  };
+  return { graphqlClient, queries };
+}
+const plainProduct = {
+  ...raw,
+  metafields: { nodes: [], pageInfo: { hasNextPage: false, endCursor: null } },
+};
+test("without read_metaobjects the adapter never asks for category attribute names", async () => {
+  const { graphqlClient, queries } = recording([{ data: { product: plainProduct } }]);
+  const adapter = shopifyAdapter(graphqlClient, { scopes: ["read_products", "write_products"] });
+  assert.equal((await adapter.read(raw.id))?.title, "Pack");
+  assert.ok(!queries[0].includes("categoryFields"));
+});
+test("an access-denied product query falls back to the basic fields instead of failing", async () => {
+  const denied = {
+    errors: [{ message: "Access denied for reference field.", extensions: { code: "ACCESS_DENIED" } }],
+  };
+  const { graphqlClient, queries } = recording([denied, { data: { product: plainProduct } }, { data: { product: plainProduct } }]);
+  const adapter = shopifyAdapter(graphqlClient);
+  assert.equal((await adapter.read(raw.id))?.title, "Pack");
+  assert.ok(queries[0].includes("categoryFields"));
+  assert.ok(!queries[1].includes("categoryFields"));
+  // The adapter remembers, so later reads go straight to the basic query.
+  await adapter.read(raw.id);
+  assert.ok(!queries[2].includes("categoryFields"));
+});
+test("a denied write is a rejected write with a clear permission message", async () => {
+  const adapter = shopifyAdapter(
+    client([{ errors: [{ message: "Access denied", extensions: { code: "ACCESS_DENIED" } }] }]),
+  );
+  await assert.rejects(adapter.writeDescription(raw.id, "<p>x</p>"), (error: unknown) => {
+    assert.ok(error instanceof AccessDeniedError);
+    assert.ok(error instanceof WriteRejectedError);
+    assert.match((error as Error).message, /approve the updated permissions/);
+    return true;
+  });
 });

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { parseFragment, type DefaultTreeAdapterMap } from "parse5";
 import { audit, escapeHtml, type Fact, type ProductData } from "../core/catalog";
 import type { ProfileKey } from "../core/profiles";
+import { sameHtml } from "../core/html";
 export function fingerprint(product: ProductData) {
   return createHash("sha256").update(JSON.stringify({ id: product.id, title: product.title, descriptionHtml: product.descriptionHtml, productType: product.productType, status: product.status,
     metafields: [...product.metafields].map(({ namespace, key, value, type }) => ({ namespace, key, value, type })).sort((a, b) => `${a.namespace}.${a.key}`.localeCompare(`${b.namespace}.${b.key}`)) })).digest("hex");
@@ -37,6 +38,6 @@ export function buildDraft(product: ProductData, input: Record<string, string>, 
   const original = stripSpecifications(product.descriptionHtml);
   const block = `<div data-soodo-specs="v1"><h3>Product specifications</h3><ul>${facts.map(f => `<li><strong>${escapeHtml(f.label)}:</strong> ${escapeHtml(f.value)}</li>`).join("")}</ul></div>`;
   const afterHtml = `${original}${original && !original.endsWith("\n") ? "\n" : ""}${block}`;
-  if (afterHtml === product.descriptionHtml) throw new Error("These specifications are already published. No changes are needed.");
+  if (sameHtml(afterHtml, product.descriptionHtml)) throw new Error("These specifications are already published. No changes are needed.");
   return { facts, afterHtml, beforeHtml: product.descriptionHtml, fingerprint: fingerprint(product) };
 }

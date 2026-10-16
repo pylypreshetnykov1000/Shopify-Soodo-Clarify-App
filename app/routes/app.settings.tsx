@@ -13,10 +13,10 @@ import {
 import { AppLink, Badge, Notice, Spinner } from "../ui/common";
 
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { shop, demo } = await context(request);
+  const { shop, demo, missingScopes } = await context(request);
   if (demo) await seedDemo();
   const store = await ensureStore(shop);
-  return { shop, demo, setting: store.category };
+  return { shop, demo, setting: store.category, missingScopes };
 }
 export async function action({ request }: ActionFunctionArgs) {
   const { shop } = await context(request);
@@ -36,7 +36,13 @@ export async function action({ request }: ActionFunctionArgs) {
 }
 
 export default function Settings() {
-  const { shop, demo, setting } = useLoaderData<typeof loader>();
+  const { shop, demo, setting, missingScopes } = useLoaderData<typeof loader>();
+  const grant = (scope: string) =>
+    missingScopes.includes(scope) ? (
+      <Badge tone="warning">Not approved yet</Badge>
+    ) : (
+      <Badge tone="success">Approved</Badge>
+    );
   const result = useActionData<typeof action>();
   const saving = useNavigation().state === "submitting";
   return (
@@ -106,11 +112,15 @@ export default function Settings() {
             </div>
             <div>
               <dt>Category values</dt>
-              <dd>Read category attribute values such as color and material (metaobjects).</dd>
+              <dd>
+                Read category attribute values such as color and material (metaobjects). {grant("read_metaobjects")}
+              </dd>
             </div>
             <div>
               <dt>Store policies</dt>
-              <dd>Read refund, shipping, privacy and contact policies.</dd>
+              <dd>
+                Read refund, shipping, privacy and contact policies. {grant("read_legal_policies")}
+              </dd>
             </div>
             <div>
               <dt>Live pages</dt>

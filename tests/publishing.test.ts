@@ -513,3 +513,30 @@ test("an expired worker cannot update the journal after a late successful write"
     await f.clean();
   }
 });
+
+test("publishing and restoring succeed when Shopify re-serializes the HTML", async () => {
+  const f = await fixture();
+  // Shopify stores an equivalent but differently formatted description.
+  const reformat = (html: string) =>
+    html.replace(/&#39;/g, "'").replace(/"/g, "'").replace(/\n/g, "").replace(/<li>/g, "\n<li>");
+  let stored = f.current().descriptionHtml;
+  const adapter: CatalogAdapter = {
+    ...f.adapter,
+    async read() {
+      return { ...f.current(), descriptionHtml: stored };
+    },
+    async writeDescription(_id, html) {
+      stored = reformat(html);
+    },
+  };
+  try {
+    const draft = await createDraft(f.shop, f.row.id, adapter, { care: "Don't tumble dry" });
+    assert.match(await publishDraft(f.shop, draft.id, adapter), /published and verified/);
+    const change = await db.change.findFirstOrThrow({ where: { suggestionId: draft.id } });
+    assert.equal(change.status, "PUBLISHED");
+    assert.notEqual(stored, change.afterHtml, "the stored HTML really was reformatted");
+    assert.match(await restoreChange(f.shop, change.id, adapter), /restored and verified/);
+  } finally {
+    await f.clean();
+  }
+});

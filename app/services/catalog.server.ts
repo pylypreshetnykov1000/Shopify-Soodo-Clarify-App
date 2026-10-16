@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import db from "../db.server";
 import { type ProductData } from "../core/catalog";
 import { resolveProfile } from "../core/profiles";
+import { sameHtml } from "../core/html";
 import { buildDraft, fingerprint } from "./drafts.server";
 import type { CatalogAdapter } from "./shopify-catalog.server";
 import { WriteRejectedError } from "./shopify-catalog.server";
@@ -331,9 +332,12 @@ async function verifyChangeUnlocked(
       "Unable to verify the saved description. Open History and retry verification.",
     );
   }
+  // Shopify may re-serialize HTML, so compare meaning, not characters.
   if (
-    product.descriptionHtml ===
-    (restoring ? change.beforeHtml : change.afterHtml)
+    sameHtml(
+      product.descriptionHtml,
+      restoring ? change.beforeHtml : change.afterHtml,
+    )
   ) {
     await db.$transaction([
       db.change.update({
@@ -350,8 +354,10 @@ async function verifyChangeUnlocked(
       : "Description published and verified.";
   }
   if (
-    product.descriptionHtml ===
-    (restoring ? change.afterHtml : change.beforeHtml)
+    sameHtml(
+      product.descriptionHtml,
+      restoring ? change.afterHtml : change.beforeHtml,
+    )
   ) {
     if (["PENDING", "UNKNOWN"].includes(change.requestOutcome)) {
       await db.change.update({
@@ -450,7 +456,7 @@ export async function restoreChange(
       throw new Error("Only a verified published change can be restored.");
     const current = await refresh(shop, change.productId, adapter, assertLease);
     await assertLease();
-    if (current.descriptionHtml !== change.afterHtml)
+    if (!sameHtml(current.descriptionHtml, change.afterHtml))
       throw new Error(
         "The description changed after publishing. Restore is blocked to preserve your newer edits.",
       );

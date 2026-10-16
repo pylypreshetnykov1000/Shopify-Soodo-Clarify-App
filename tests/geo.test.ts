@@ -213,3 +213,23 @@ test("automatic checklists follow each product's category", async () => {
     await db.store.deleteMany({ where: { shop } });
   }
 });
+test("area readiness waits for checks that have not run instead of reporting a pass", async () => {
+  const shop = `geo-${randomUUID()}.myshopify.com`;
+  try {
+    await db.store.create({ data: { shop, category: "outdoor" } });
+    const legacy: ProductData = { ...demoProducts[1], commerce: undefined };
+    for (const product of [demoProducts[1], demoProducts[2], legacy])
+      await db.catalogProduct.create({
+        data: { shop, gid: `${product.id}-${randomUUID()}`, title: product.title, payload: JSON.stringify(product) },
+      });
+    const areas = Object.fromEntries((await catalogOverview(shop)).areas.map((a) => [a.group, a]));
+    // No live checks yet: nothing can be claimed to pass visibility.
+    assert.equal(areas.visibility.passing, 0);
+    assert.equal(areas.visibility.pending, 3);
+    // The legacy payload lacks identity data: pending, while the others are measured.
+    assert.equal(areas.identity.pending, 1);
+    assert.equal(areas.identity.total, 2);
+  } finally {
+    await db.store.deleteMany({ where: { shop } });
+  }
+});

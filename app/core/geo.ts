@@ -74,6 +74,9 @@ export function safePublicUrl(value?: string | null) {
 }
 const plural = (count: number, word: string) =>
   `${count} ${word}${count === 1 ? "" : "s"}`;
+/** "1 of 1 variant has", "1 of 3 variants have". */
+const ofVariants = (count: number, total: number, verb: [string, string]) =>
+  `${count} of ${plural(total, "variant")} ${total === 1 ? verb[0] : verb[1]}`;
 
 /**
  * Evaluates imported Shopify data and, when available, the last live page
@@ -296,7 +299,7 @@ export function auditGeo(
       priority: "medium",
       evidence: !knownCommerce
         ? "Variant data was not collected by the last scan."
-        : `${withBarcode} of ${plural(variants.length, "variant")} have a barcode${sampled}.`,
+        : `${ofVariants(withBarcode, variants.length, ["has", "have"])} a barcode${sampled}.`,
       action: !knownCommerce
         ? "Scan the catalog to import variants."
         : "Add the manufacturer barcode to each variant. If the product is handmade or private label with no barcode, you can leave this.",
@@ -310,7 +313,7 @@ export function auditGeo(
       priority: "low",
       evidence: !knownCommerce
         ? "Variant data was not collected by the last scan."
-        : `${withSku} of ${plural(variants.length, "variant")} have a SKU${sampled}.`,
+        : `${ofVariants(withSku, variants.length, ["has", "have"])} a SKU${sampled}.`,
       action: !knownCommerce
         ? "Scan the catalog to import variants."
         : "Give every variant a unique SKU so feeds and agents can tell variants apart.",
@@ -464,7 +467,7 @@ export function auditGeo(
       priority: "medium",
       evidence: !knownCommerce
         ? "Stock status was not collected by the last scan."
-        : `${available} of ${plural(variants.length, "variant")} available for sale.`,
+        : `${ofVariants(available, variants.length, ["is", "are"])} available for sale.`,
       action: !knownCommerce
         ? "Scan the catalog to import stock status."
         : "Restock, or allow pre-orders. Shopping agents usually skip products that cannot be bought.",
