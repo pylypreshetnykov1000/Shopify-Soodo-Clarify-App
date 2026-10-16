@@ -18,12 +18,14 @@ export function AppLink({
   className,
   current,
   label,
+  onClick,
 }: {
   to: string;
   children: ReactNode;
   className?: string;
   current?: boolean;
   label?: string;
+  onClick?: () => void;
 }) {
   return (
     <Link
@@ -33,6 +35,7 @@ export function AppLink({
       aria-label={label}
       prefetch="intent"
       viewTransition
+      onClick={onClick}
     >
       {children}
     </Link>
@@ -318,6 +321,12 @@ const ICONS = {
   external: <path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6" />,
   chevron: <path d="m9 6 6 6-6 6" />,
   pause: <path d="M9 6v12M15 6v12" />,
+  help: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.7M12 16.6h.01" />
+    </>
+  ),
 } as const;
 export type IconName = keyof typeof ICONS;
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {

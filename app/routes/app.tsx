@@ -13,6 +13,7 @@ import { NavMenu } from "@shopify/app-bridge-react";
 
 import { context } from "../services/context.server";
 import { AppLink, Icon, Logo, type IconName } from "../ui/common";
+import { HelpProvider } from "../ui/help";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const ctx = await context(request);
@@ -31,6 +32,7 @@ const NAV: { to: string; name: string; icon: IconName }[] = [
   { to: "/app/fixes", name: "Fix plan", icon: "list" },
   { to: "/app/history", name: "Change history", icon: "history" },
   { to: "/app/settings", name: "Settings", icon: "settings" },
+  { to: "/app/help", name: "Help", icon: "help" },
 ];
 
 export default function App() {
@@ -53,6 +55,7 @@ export default function App() {
     item.to === "/app" ? pathname === "/app" || pathname === "/app/" : pathname.startsWith(item.to),
   )?.to;
   const shell = (
+    <HelpProvider>
     <div className={demo ? "app-shell" : "app-shell embedded-shell"}>
       <a href="#main-content" className="skip-link">
         Skip to content
@@ -99,6 +102,7 @@ export default function App() {
         </main>
       </div>
     </div>
+    </HelpProvider>
   );
 
   return demo ? (
@@ -113,6 +117,7 @@ export default function App() {
         <a href="/app/fixes">Fix plan</a>
         <a href="/app/history">Change history</a>
         <a href="/app/settings">Settings</a>
+        <a href="/app/help">Help</a>
       </NavMenu>
       {shell}
     </AppProvider>

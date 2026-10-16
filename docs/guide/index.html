@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>Soodo GEO Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: a field manual. Each chapter is one screen of the app: a framed
+   screenshot "plate" with numbered callouts, and a legend keyed to them. */
+:root {
+  --forest: #184a38;      /* Soodo brand green */
+  --leaf: #2f6b52;
+  --mint: #9be0b8;
+  --signal: #ea6a1f;      /* callout orange, same as in the screenshots */
+  --ink: #1b201d;
+  --ink-2: #3c4540;
+  --muted: #66706a;
+  --paper: #f3f4f1;
+  --sheet: #ffffff;
+  --line: #dfe3dd;
+  --tint: #e8efe9;
+  --note: #fff4ea;
+  --note-line: #f2c9a8;
+  --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --forest: #1f5c46; --leaf: #8fd1ad; --mint: #9be0b8; --signal: #ff8a47;
+    --ink: #e9eee9; --ink-2: #c7d0ca; --muted: #9aa59e;
+    --paper: #121614; --sheet: #1a1f1c; --line: #2c3530; --tint: #1d2a24;
+    --note: #2a1f17; --note-line: #6b4426;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --forest: #1f5c46; --leaf: #8fd1ad; --mint: #9be0b8; --signal: #ff8a47;
+  --ink: #e9eee9; --ink-2: #c7d0ca; --muted: #9aa59e;
+  --paper: #121614; --sheet: #1a1f1c; --line: #2c3530; --tint: #1d2a24;
+  --note: #2a1f17; --note-line: #6b4426;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 17px/1.6 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+img { max-width: 100%; display: block; }
+a { color: var(--leaf); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+p { margin: 0; }
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
+}
+
+/* Cover */
+.cover {
+  background: #184a38;
+  color: #fff;
+  padding-block: 56px 0;
+  overflow: hidden;
+}
+.cover .wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 40px; align-items: end; }
+.brandline { display: flex; align-items: center; gap: 10px; font: 600 15px var(--body); }
+.brandline svg { flex-shrink: 0; }
+.brandline .tag { font: 600 10px var(--mono); letter-spacing: .1em; border: 1px solid #9be0b8; color: #9be0b8; padding: 1px 5px; border-radius: 2px; }
+.cover h1 {
+  margin-top: 40px;
+  font-size: clamp(44px, 7vw, 84px);
+  font-stretch: 112%;
+  font-weight: 760;
+  line-height: .95;
+  letter-spacing: -0.03em;
+}
+.cover .lede { margin-top: 20px; max-width: 34ch; font-size: 19px; color: rgba(255,255,255,.78); }
+.cover .meta { margin-top: 28px; padding-bottom: 48px; display: flex; flex-wrap: wrap; gap: 8px 24px; font: 500 12px var(--mono); color: #9be0b8; letter-spacing: .04em; text-transform: uppercase; }
+.cover .phone {
+  justify-self: center;
+  width: min(300px, 100%);
+  border-radius: 6px 6px 0 0;
+  overflow: hidden;
+  box-shadow: 0 -2px 0 2px rgba(255,255,255,.08), 0 20px 60px rgba(0,0,0,.35);
+  max-height: 420px;
+}
+
+/* Contents */
+.contents { padding-block: 48px 8px; }
+.contents h2, .section-title { font-size: 13px; font-family: var(--mono); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.toc { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0 32px; list-style: none; padding: 0; counter-reset: none; }
+.toc li { border-top: 1px solid var(--line); }
+.toc a { display: flex; gap: 14px; align-items: baseline; padding: 11px 0; text-decoration: none; color: var(--ink); }
+.toc a:hover span:last-child { text-decoration: underline; text-underline-offset: 3px; }
+.toc .n { font: 600 12px var(--mono); color: var(--signal); width: 22px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+
+/* Intro blocks */
+.intro { padding-block: 40px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+.intro h2 { font-size: 28px; font-stretch: 108%; }
+.intro p { margin-top: 12px; color: var(--ink-2); max-width: 60ch; }
+.flow { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 10px; }
+.flow li { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 14px; align-items: start; background: var(--sheet); border: 1px solid var(--line); border-radius: 4px; padding: 14px 16px; }
+.flow .dot { width: 34px; height: 34px; border-radius: 50%; background: var(--forest); color: #fff; display: grid; place-items: center; font: 700 15px var(--display); }
+.flow strong { display: block; font-size: 16px; }
+.flow span { color: var(--muted); font-size: 15px; }
+.scale { margin-top: 18px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.scale div { background: var(--sheet); border: 1px solid var(--line); border-radius: 4px; padding: 12px; }
+.scale b { display: flex; align-items: center; gap: 8px; font-size: 15px; }
+.scale i { width: 9px; height: 9px; border-radius: 1px; display: inline-block; }
+.scale small { display: block; color: var(--muted); font-size: 13.5px; margin-top: 2px; }
+
+/* Chapters */
+.chapter { padding-block: 56px; border-top: 1px solid var(--line); }
+.chapter-head { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 24px; align-items: end; margin-bottom: 24px; }
+.chapter-num { grid-row: span 2; font: 800 clamp(56px, 8vw, 88px)/0.8 var(--display); font-stretch: 118%; color: var(--forest); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+:root[data-theme="dark"] .chapter-num { color: var(--leaf); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .chapter-num { color: var(--leaf); } }
+.chapter-kicker { font: 600 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--signal); }
+.chapter h2 { font-size: clamp(28px, 4vw, 40px); font-stretch: 108%; font-weight: 720; }
+.chapter .why { margin: 0 0 28px; max-width: 64ch; font-size: 18px; color: var(--ink-2); }
+
+.plate { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(260px, 1fr); gap: 28px; align-items: start; margin-top: 28px; }
+.plate.stack { grid-template-columns: minmax(0, 1fr); }
+figure { margin: 0; }
+.shot { background: var(--sheet); border: 1px solid var(--line); border-radius: 4px; padding: 8px; }
+.shot img { border-radius: 2px; width: 100%; height: auto; }
+figcaption { margin-top: 8px; font: 500 12px var(--mono); color: var(--muted); letter-spacing: .02em; }
+.legend { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+.legend li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 12px; }
+.legend .c { width: 26px; height: 26px; border-radius: 50%; background: var(--signal); color: #fff; display: grid; place-items: center; font: 700 13px var(--body); font-variant-numeric: tabular-nums; }
+.legend b { display: block; font-size: 16px; line-height: 1.35; }
+.legend span { color: var(--ink-2); font-size: 15.5px; }
+
+.note { margin-top: 24px; border: 1px solid var(--note-line); background: var(--note); border-radius: 4px; padding: 14px 18px; max-width: 76ch; font-size: 15.5px; }
+.note b { font-family: var(--mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--signal); display: block; margin-bottom: 4px; }
+.tip { border-color: var(--line); background: var(--tint); }
+.tip b { color: var(--leaf); }
+.steps-inline { margin: 10px 0 0; padding-left: 20px; }
+.steps-inline li + li { margin-top: 4px; }
+
+/* FAQ and glossary */
+.faq { display: grid; gap: 12px; margin-top: 24px; }
+.faq details { background: var(--sheet); border: 1px solid var(--line); border-radius: 4px; }
+.faq summary { cursor: pointer; padding: 16px 18px; font: 600 17px var(--body); list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; font: 600 20px/1 var(--mono); color: var(--signal); }
+.faq details[open] summary::after { content: "–"; }
+.faq .a { padding: 0 18px 18px; color: var(--ink-2); max-width: 74ch; display: grid; gap: 10px; }
+.glossary { margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0 32px; }
+.glossary div { border-top: 1px solid var(--line); padding: 14px 0; }
+.glossary dt { font-weight: 700; }
+.glossary dd { margin: 4px 0 0; color: var(--ink-2); font-size: 15.5px; }
+footer { padding-block: 40px 56px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+
+@media (max-width: 860px) {
+  .cover .wrap, .intro, .plate { grid-template-columns: minmax(0, 1fr); }
+  .cover .phone { max-height: 300px; }
+  .scale { grid-template-columns: minmax(0, 1fr); }
+  .chapter { padding-block: 40px; }
+  .chapter-head { grid-template-columns: minmax(0, 1fr); }
+  .chapter-num { grid-row: auto; font-size: 52px; }
+}
+
+/* Print / PDF */
+@page { size: A4; margin: 14mm 12mm; }
+@media print {
+  body { background: #fff; font-size: 11.5pt; }
+  .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; break-after: page; padding-top: 40mm; }
+  .cover .wrap { grid-template-columns: 1fr; }
+  .cover .phone { max-height: 120mm; }
+  .chapter { break-before: page; padding-block: 0; border: 0; }
+  .plate { grid-template-columns: minmax(0, 1fr); }
+  figure, .legend li, .note, .faq details { break-inside: avoid; }
+  .shot { padding: 4px; }
+  .faq summary::after { content: ""; }
+  .faq .a { display: grid; }
+  .toc a { padding: 6px 0; }
+  .contents { break-after: page; }
+}
+</style>
+
+<header class="cover">
+  <div class="wrap">
+    <div>
+      <div class="brandline">
+        <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="3" fill="#fff"/><circle cx="11" cy="13" r="5.5" fill="none" stroke="#184a38" stroke-width="2.2"/><circle cx="17.2" cy="6.8" r="2.2" fill="#2f9b6b"/></svg>
+        Soodo <span class="tag">GEO</span>
+      </div>
+      <h1>User guide</h1>
+      <p class="lede">How to get your products found by search engines and AI shopping assistants, one screen at a time.</p>
+      <div class="meta"><span>For store owners and staff</span><span>Shopify admin app</span><span>Edition · October 2026</span></div>
+    </div>
+    <div class="phone"><img src="images/16-phone.jpg" alt="Soodo GEO Overview on a phone: catalog readiness 83%, next step and setup progress" width="390" height="1150"></div>
+  </div>
+</header>
+
+<main>
+<section class="wrap contents" aria-labelledby="toc-title">
+  <h2 id="toc-title">Contents</h2>
+  <ol class="toc">
+    <li><a href="#how"><span class="n">—</span><span>How Soodo works</span></a></li>
+    <li><a href="#ch1"><span class="n">01</span><span>Overview</span></a></li>
+    <li><a href="#ch2"><span class="n">02</span><span>Scan and live checks</span></a></li>
+    <li><a href="#ch3"><span class="n">03</span><span>Products</span></a></li>
+    <li><a href="#ch4"><span class="n">04</span><span>A product’s checks</span></a></li>
+    <li><a href="#ch5"><span class="n">05</span><span>Adding specifications</span></a></li>
+    <li><a href="#ch6"><span class="n">06</span><span>Review and publish</span></a></li>
+    <li><a href="#ch7"><span class="n">07</span><span>Live page</span></a></li>
+    <li><a href="#ch8"><span class="n">08</span><span>Fix plan</span></a></li>
+    <li><a href="#ch9"><span class="n">09</span><span>Change history</span></a></li>
+    <li><a href="#ch10"><span class="n">10</span><span>Settings and permissions</span></a></li>
+    <li><a href="#faq"><span class="n">?</span><span>Troubleshooting</span></a></li>
+    <li><a href="#glossary"><span class="n">A–Z</span><span>Glossary</span></a></li>
+  </ol>
+</section>
+
+<section class="wrap intro" id="how" aria-labelledby="how-title">
+  <div>
+    <h2 id="how-title">How Soodo works</h2>
+    <p>Google, ChatGPT, Perplexity and other assistants recommend products they can read and trust. Soodo checks each of your products the way those systems see them, then gives you a short list of fixes, most important first.</p>
+    <p>Scanning and checking never change your store. The only thing Soodo writes is a product description, and only after you approve the exact wording. Every previous version is saved and can be restored.</p>
+    <div class="scale" aria-label="Priority levels">
+      <div><b><i style="background:#b4321f"></i>High</b><small>Fix first. Blocks discovery.</small></div>
+      <div><b><i style="background:#9a6408"></i>Medium</b><small>Weakens how products are matched.</small></div>
+      <div><b><i style="background:#5b6b7d"></i>Low</b><small>Polish once the rest is done.</small></div>
+    </div>
+  </div>
+  <div>
+    <h2>The workflow</h2>
+    <ol class="flow">
+      <li><span class="dot">1</span><div><strong>Scan catalog</strong><span>Imports products, variants, categories and store policies. Read-only.</span></div></li>
+      <li><span class="dot">2</span><div><strong>Check live pages</strong><span>Opens each published product page and robots.txt, the way a crawler does.</span></div></li>
+      <li><span class="dot">3</span><div><strong>Fix issues</strong><span>Work through the fix plan. Most fixes are made in Shopify; missing specifications are added through Soodo.</span></div></li>
+      <li><span class="dot">4</span><div><strong>Review and publish</strong><span>Approve the proposed description. Soodo publishes it and checks the result.</span></div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="wrap chapter" id="ch1" aria-labelledby="ch1-title">
+  <div class="chapter-head"><span class="chapter-num">01</span><span class="chapter-kicker">Home screen</span><h2 id="ch1-title">Overview</h2></div>
+  <p class="why">The Overview answers two questions: how ready is my catalog, and what should I do next? Start here every time.</p>
+  <div class="plate">
+    <figure class="shot"><img src="images/01-overview.jpg" alt="Overview: readiness 82%, next step card, setup progress and four area tiles"><figcaption>Overview, before the first live check</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Catalog readiness</b><span>The average score of your active products, and how much it changed in the last 30 days. 100 means every check that could run has passed.</span></div></li>
+      <li><span class="c">2</span><div><b>Next step</b><span>The single most useful thing to do now. Press the button; Soodo takes you there or starts the job.</span></div></li>
+      <li><span class="c">3</span><div><b>Setup progress</b><span>Import catalog, check live pages, fix issues. A tick means the step is done.</span></div></li>
+      <li><span class="c">4</span><div><b>Readiness by area</b><span>Share of products that pass each area. “Run live checks to measure” means that area waits on step 2. Click a tile to see its fixes.</span></div></li>
+      <li><span class="c">5</span><div><b>Scan catalog</b><span>Run a new scan after you change products in Shopify.</span></div></li>
+    </ol>
+  </div>
+  <div class="plate">
+    <figure class="shot"><img src="images/04-overview-panels.jpg" alt="Overview panels: readiness over time, products by readiness, top fixes, needs attention, store-wide signals and recent changes"><figcaption>Further down the Overview</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Readiness over time</b><span>One reading per day, saved after scans, live checks and published changes.</span></div></li>
+      <li><span class="c">2</span><div><b>Products by readiness</b><span>How many products are Strong, Good, Fair or Weak, so a good average can’t hide weak products.</span></div></li>
+      <li><span class="c">3</span><div><b>Top fixes</b><span>The five fixes with the most impact. “2/3” means two of your three active products are affected.</span></div></li>
+      <li><span class="c">4</span><div><b>Needs attention</b><span>Products with the lowest score. Click one to open it.</span></div></li>
+      <li><span class="c">5</span><div><b>Store-wide signals</b><span>Policies, contact details and crawler access that apply to every product.</span></div></li>
+      <li><span class="c">6</span><div><b>Recent changes</b><span>The latest descriptions you published or restored.</span></div></li>
+    </ol>
+  </div>
+  <div class="plate">
+    <figure class="shot"><img src="images/05-trend-tooltip.jpg" alt="Readiness chart with a tooltip showing date, readiness and open fixes"><figcaption>Hover the chart, or focus it and use the arrow keys</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Daily detail</b><span>The date, the readiness score, how many products were fully ready and how many fixes were open that day.</span></div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="wrap chapter" id="ch2" aria-labelledby="ch2-title">
+  <div class="chapter-head"><span class="chapter-num">02</span><span class="chapter-kicker">Steps 1 and 2</span><h2 id="ch2-title">Scan and live checks</h2></div>
+  <p class="why">Both jobs run in small batches with a progress bar, so large catalogs never time out. You can pause and continue later; finished work is kept.</p>
+  <div class="plate">
+    <figure class="shot"><img src="images/02-live-progress.jpg" alt="Live page check in progress with a progress bar and a Pause button"><figcaption>A live check in progress</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Progress</b><span>What is running and how much is left.</span></div></li>
+      <li><span class="c">2</span><div><b>Pause</b><span>Stops after the current batch. Press Continue scan or Check live pages to carry on.</span></div></li>
+    </ol>
+  </div>
+  <div class="plate">
+    <figure class="shot"><img src="images/03-toast.jpg" alt="Confirmation message: Live page checks complete"><figcaption>Confirmation at the bottom of the screen</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Done</b><span>Success messages appear here for a few seconds. Errors stay on the page until you act on them.</span></div></li>
+    </ol>
+  </div>
+  <div class="note tip"><b>Good to know</b>Only products on the Online Store sales channel have a public page, so only those get a live check.</div>
+</section>
+
+<section class="wrap chapter" id="ch3" aria-labelledby="ch3-title">
+  <div class="chapter-head"><span class="chapter-num">03</span><span class="chapter-kicker">Catalog</span><h2 id="ch3-title">Products</h2></div>
+  <p class="why">Every product with its score, its next fix and its live page status. Click anywhere on a row to open the product.</p>
+  <div class="plate">
+    <figure class="shot"><img src="images/06-products.jpg" alt="Products table with filters, search, sorting, readiness, next fix and live page columns"><figcaption>Products</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Filters</b><span>All, Needs fixes, Draft ready and Ready, with counts.</span></div></li>
+      <li><span class="c">2</span><div><b>Search</b><span>By product name, type or category.</span></div></li>
+      <li><span class="c">3</span><div><b>Sort</b><span>Needs attention first is the default. You can also click a column header.</span></div></li>
+      <li><span class="c">4</span><div><b>Readiness</b><span>The product’s score out of 100. Red under 50, amber under 80, green from 80.</span></div></li>
+      <li><span class="c">5</span><div><b>Next fix</b><span>The most important open fix, with its priority and how many more there are.</span></div></li>
+      <li><span class="c">6</span><div><b>Live page</b><span>Passing, Issues, Not checked, or No page if the product isn’t on the Online Store.</span></div></li>
+      <li><span class="c">7</span><div><b>Open a product</b><span>The whole row is clickable.</span></div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="wrap chapter" id="ch4" aria-labelledby="ch4-title">
+  <div class="chapter-head"><span class="chapter-num">04</span><span class="chapter-kicker">Product page</span><h2 id="ch4-title">A product’s checks</h2></div>
+  <p class="why">Each product has three tabs: Checks, Specifications and Live page. Checks lists what to fix, grouped by area, with the most important one already open.</p>
+  <div class="plate">
+    <figure class="shot"><img src="images/07-product-checks.jpg" alt="Product page with readiness dial, tabs, an open check with advice, the by-area summary and the live page summary"><figcaption>Summit Shell Jacket, Checks tab</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Product readiness</b><span>This product’s score out of 100.</span></div></li>
+      <li><span class="c">2</span><div><b>Tabs</b><span>The number on Checks is how many fixes are open. Specifications shows how many key facts were found.</span></div></li>
+      <li><span class="c">3</span><div><b>A check</b><span>The problem in one line. Click it to see what to do and the button that takes you there. One check is open at a time.</span></div></li>
+      <li><span class="c">4</span><div><b>By area</b><span>How many checks passed in each area.</span></div></li>
+      <li><span class="c">5</span><div><b>Live page summary</b><span>The result of the last live check, with a link to the details.</span></div></li>
+    </ol>
+  </div>
+  <div class="note tip"><b>Colour key</b>Red square: high priority. Amber: medium. Grey-blue: low. Green: passed. Hollow square: not checked yet.</div>
+</section>
+
+<section class="wrap chapter" id="ch5" aria-labelledby="ch5-title">
+  <div class="chapter-head"><span class="chapter-num">05</span><span class="chapter-kicker">Step 3 · in Soodo</span><h2 id="ch5-title">Adding specifications</h2></div>
+  <p class="why">Assistants answer buyers’ questions from what is written on the page. Soodo finds the key facts for each type of product and helps you write the missing ones into the description.</p>
+  <div class="plate">
+    <figure class="shot"><img src="images/08-specifications.jpg" alt="Specifications tab with step tracker, found and missing facts, confirmation and Create description draft button"><figcaption>Specifications tab, three missing facts filled in</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Where you are</b><span>Add verified facts, review the draft, publish.</span></div></li>
+      <li><span class="c">2</span><div><b>Found</b><span>Already known from your product data. The source is shown underneath. These fields are locked; change them in Shopify.</span></div></li>
+      <li><span class="c">3</span><div><b>Missing</b><span>Type the value only if you have verified it. Leave anything you don’t know empty.</span></div></li>
+      <li><span class="c">4</span><div><b>Confirm</b><span>Tick to confirm the values are accurate.</span></div></li>
+      <li><span class="c">5</span><div><b>Create description draft</b><span>Makes a draft. Nothing changes in your store yet.</span></div></li>
+    </ol>
+  </div>
+  <div class="plate">
+    <figure class="shot"><img src="images/09-buyer-questions.jpg" alt="Buyer questions with status badges: stored fact only and missing"><figcaption>Buyer questions on the same tab</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Buyer questions</b><span>What an assistant could answer from your facts. “Stored fact only” means the fact exists in Shopify but may not show on the page, so add it to the description. Soodo never guesses an answer.</span></div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="wrap chapter" id="ch6" aria-labelledby="ch6-title">
+  <div class="chapter-head"><span class="chapter-num">06</span><span class="chapter-kicker">Step 4</span><h2 id="ch6-title">Review and publish</h2></div>
+  <p class="why">You always see the exact wording before anything is published. Soodo keeps your existing text and adds one clear specifications list at the end.</p>
+  <div class="plate">
+    <figure class="shot"><img src="images/10-draft-review.jpg" alt="Draft review comparing current and proposed descriptions, with sources, approval checkbox, Publish and Reject buttons"><figcaption>Draft review</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Current</b><span>The description in your store today.</span></div></li>
+      <li><span class="c">2</span><div><b>Proposed</b><span>Your text, plus the specifications list.</span></div></li>
+      <li><span class="c">3</span><div><b>Sources</b><span>Where each value came from: your product data, or you.</span></div></li>
+      <li><span class="c">4</span><div><b>Approve</b><span>Required before publishing.</span></div></li>
+      <li><span class="c">5</span><div><b>Publish</b><span>Soodo re-reads the product, publishes, then reads it back to confirm the change landed. In a real store the button says Publish to Shopify.</span></div></li>
+      <li><span class="c">6</span><div><b>Reject draft</b><span>Discards the draft. Your product is not changed.</span></div></li>
+    </ol>
+  </div>
+  <div class="plate">
+    <figure class="shot"><img src="images/11-published.jpg" alt="Product after publishing: confirmation message and Specifications 5 of 5"><figcaption>After publishing</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Published and verified</b><span>The change is live in Shopify and has been checked.</span></div></li>
+      <li><span class="c">2</span><div><b>All facts found</b><span>The specifications now come from the description itself, and the score goes up.</span></div></li>
+    </ol>
+  </div>
+  <div class="note"><b>If the product changed</b>If someone edits the product in Shopify after the draft was made, Soodo stops and asks you to create a fresh draft. It never overwrites newer edits.</div>
+</section>
+
+<section class="wrap chapter" id="ch7" aria-labelledby="ch7-title">
+  <div class="chapter-head"><span class="chapter-num">07</span><span class="chapter-kicker">Product page</span><h2 id="ch7-title">Live page</h2></div>
+  <p class="why">What search engines and AI assistants actually see when they open the product page.</p>
+  <div class="plate">
+    <figure class="shot"><img src="images/12-live-page.jpg" alt="Live page results and crawler access list"><figcaption>Basecamp Two Tent, Live page tab</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Page results</b><span>Is the page reachable and indexable, and does its product data match Shopify?</span></div></li>
+      <li><span class="c">2</span><div><b>A problem found</b><span>Here the page has two product markup blocks, usually left by an old app or theme edit. Search engines may ignore conflicting markup.</span></div></li>
+      <li><span class="c">3</span><div><b>Search and assistant crawlers</b><span>Allowed or blocked by your robots.txt. These should be allowed.</span></div></li>
+      <li><span class="c">4</span><div><b>Training crawlers</b><span>Used to train AI models. Blocking them is your choice and doesn’t affect search results.</span></div></li>
+      <li><span class="c">5</span><div><b>Check again</b><span>Re-runs the check after you fix something.</span></div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="wrap chapter" id="ch8" aria-labelledby="ch8-title">
+  <div class="chapter-head"><span class="chapter-num">08</span><span class="chapter-kicker">Step 3 · across products</span><h2 id="ch8-title">Fix plan</h2></div>
+  <p class="why">Every open fix across your active products, ranked by impact. Fix the same issue on several products in one pass.</p>
+  <div class="plate">
+    <figure class="shot"><img src="images/13-fix-plan.jpg" alt="Fix plan with store-wide issue, area and priority filters, and an expanded fix showing how to fix it and the affected products"><figcaption>Fix plan with one fix opened</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Store-wide</b><span>One change in Shopify settings helps every product.</span></div></li>
+      <li><span class="c">2</span><div><b>Area filter</b><span>Show fixes for one area only.</span></div></li>
+      <li><span class="c">3</span><div><b>Priority filter</b><span>Click High, Medium or Low; click again to clear.</span></div></li>
+      <li><span class="c">4</span><div><b>Impact</b><span>How many active products the fix affects.</span></div></li>
+      <li><span class="c">5</span><div><b>How and where</b><span>What to do, and whether it’s done in Soodo, the Shopify product editor or your theme.</span></div></li>
+      <li><span class="c">6</span><div><b>Affected products</b><span>Open takes you to the right tab of that product.</span></div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="wrap chapter" id="ch9" aria-labelledby="ch9-title">
+  <div class="chapter-head"><span class="chapter-num">09</span><span class="chapter-kicker">Undo</span><h2 id="ch9-title">Change history</h2></div>
+  <p class="why">Every description Soodo published, with the version it replaced.</p>
+  <div class="plate">
+    <figure class="shot"><img src="images/14-history.jpg" alt="Change history entry with status, saved descriptions and restore controls"><figcaption>Change history</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>When</b><span>Date and time of the change (UTC).</span></div></li>
+      <li><span class="c">2</span><div><b>Status</b><span>Published, restored, or a state that needs checking.</span></div></li>
+      <li><span class="c">3</span><div><b>Saved descriptions</b><span>The version before and the version published, side by side.</span></div></li>
+      <li><span class="c">4</span><div><b>Restore</b><span>Tick and press Restore to put the previous description back. Restore is blocked if the product was edited afterwards, so newer work is never lost.</span></div></li>
+    </ol>
+  </div>
+  <div class="note"><b>“Verify saved result”</b>If the connection drops while publishing, Soodo can’t be sure the change landed. It then blocks further changes to that product and shows Verify saved result. Press it; Soodo reads the product and settles the status.</div>
+</section>
+
+<section class="wrap chapter" id="ch10" aria-labelledby="ch10-title">
+  <div class="chapter-head"><span class="chapter-num">10</span><span class="chapter-kicker">Setup</span><h2 id="ch10-title">Settings and permissions</h2></div>
+  <p class="why">Choose which specification checklist applies, and see which Shopify permissions Soodo has.</p>
+  <div class="plate">
+    <figure class="shot"><img src="images/15-settings.jpg" alt="Settings: checklist choices, save button, permissions and publishing rules"><figcaption>Settings</figcaption></figure>
+    <ol class="legend">
+      <li><span class="c">1</span><div><b>Specification checklist</b><span>Automatic picks the right facts for each product from its Shopify category. Choose a fixed list if your whole catalog is one type.</span></div></li>
+      <li><span class="c">2</span><div><b>Save checklist</b><span>Applies immediately to every product.</span></div></li>
+      <li><span class="c">3</span><div><b>Permissions</b><span>What Soodo can read and write. A permission marked “Not approved yet” means some checks show as not checked until you approve it.</span></div></li>
+      <li><span class="c">4</span><div><b>Publishing rules</b><span>Approval is always required, your text is kept, and every change can be undone.</span></div></li>
+    </ol>
+  </div>
+</section>
+
+<section class="wrap chapter" id="faq" aria-labelledby="faq-title">
+  <div class="chapter-head"><span class="chapter-num">?</span><span class="chapter-kicker">When something looks wrong</span><h2 id="faq-title">Troubleshooting</h2></div>
+  <div class="faq">
+    <details open>
+      <summary>Publishing shows an error</summary>
+      <div class="a">
+        <p>Before publishing, Soodo re-reads the product from Shopify to make sure nothing changed. If Shopify refuses that read, the publish stops and nothing is changed.</p>
+        <p>The most common cause is a permission that hasn’t been approved yet. Open Soodo from your Shopify admin and accept the permission request, then try again. Settings shows whether each permission is approved.</p>
+        <p>If it still fails, send a screenshot of the error message itself.</p>
+      </div>
+    </details>
+    <details>
+      <summary>“Shopify did not return a public Online Store URL”</summary>
+      <div class="a"><p>The product isn’t available on the Online Store sales channel, so it has no public page. Search engines and assistants can’t see it, and Soodo can’t live-check it. If the product should be for sale, open it in Shopify and make it available on the Online Store channel.</p></div>
+    </details>
+    <details>
+      <summary>Some checks say “Not checked yet”</summary>
+      <div class="a"><p>They depend on a step that hasn’t run. Visibility checks need a live check; category, barcode and price checks need a scan from the current version. Run Scan catalog, then Check live pages.</p></div>
+    </details>
+    <details>
+      <summary>The scan stopped part way (“Partly imported”)</summary>
+      <div class="a"><p>Press Continue scan; finished batches are kept. If it stops with an error, read the message. A permission message means you need to approve the updated permissions first.</p></div>
+    </details>
+    <details>
+      <summary>An area tile shows “—”</summary>
+      <div class="a"><p>No product has had all of that area’s checks run yet. Soodo won’t claim a pass it hasn’t measured. The note under the tile says which step to run.</p></div>
+    </details>
+    <details>
+      <summary>History says “Stopped: product changed”</summary>
+      <div class="a"><p>The description in Shopify changed while Soodo was publishing. Your current content was kept. Review the product and create a fresh draft.</p></div>
+    </details>
+    <details>
+      <summary>Does a score of 100 guarantee I’ll appear in AI answers?</summary>
+      <div class="a"><p>No. Readiness measures what Soodo can verify: that pages are reachable, data is complete and consistent, and facts are written clearly. Those make products easier to find and recommend, but no tool can guarantee a ranking.</p></div>
+    </details>
+  </div>
+</section>
+
+<section class="wrap chapter" id="glossary" aria-labelledby="glossary-title">
+  <div class="chapter-head"><span class="chapter-num">A–Z</span><span class="chapter-kicker">Terms used in the app</span><h2 id="glossary-title">Glossary</h2></div>
+  <dl class="glossary">
+    <div><dt>Readiness</dt><dd>A score from 0 to 100. High-priority checks count three times, medium twice, low once. Checks that couldn’t run are left out.</dd></div>
+    <div><dt>Active product</dt><dd>A product with status Active in Shopify. Draft and archived products are left out of the fix plan.</dd></div>
+    <div><dt>Shopify product category</dt><dd>The standard category from Shopify’s product taxonomy, such as Apparel › Coats. Different from the free-text product type.</dd></div>
+    <div><dt>Category attributes</dt><dd>Fields like color, fabric or size that belong to a category. Filled in on the product in Shopify.</dd></div>
+    <div><dt>GTIN / barcode</dt><dd>The manufacturer’s barcode number (UPC, EAN). Lets search engines match the exact item.</dd></div>
+    <div><dt>Structured data</dt><dd>Hidden product markup in the page that machines read for price, stock and identifiers. Your theme usually adds it.</dd></div>
+    <div><dt>robots.txt</dt><dd>A file on your store that tells crawlers which pages they may read. Edited in your theme as robots.txt.liquid.</dd></div>
+    <div><dt>Crawler</dt><dd>A program that reads web pages for a search engine or assistant, such as Googlebot or OAI-SearchBot for ChatGPT search.</dd></div>
+    <div><dt>noindex</dt><dd>A tag asking search engines not to list the page.</dd></div>
+    <div><dt>Canonical link</dt><dd>Tells search engines which address is the main one for a page.</dd></div>
+    <div><dt>Metafield</dt><dd>An extra field stored on a product in Shopify. Your theme may or may not show it.</dd></div>
+    <div><dt>Draft</dt><dd>A proposed description waiting for your approval. Nothing changes until you publish it.</dd></div>
+  </dl>
+</section>
+</main>
+
+<footer class="wrap">Soodo GEO user guide. Screenshots are from the demo store Trail Supply; your store shows your own products. Scanning and checking never change your store, and every published description can be restored.</footer>
+
+</body>
+</html>

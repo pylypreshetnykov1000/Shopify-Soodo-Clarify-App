@@ -26,6 +26,7 @@ import {
 import { CountUp, Steps, type StepState } from "../ui/motion";
 import { Distribution, TrendChart } from "../ui/charts";
 import { JobPanels, LiveButton, ScanButton, useLiveChecks, useScan } from "../ui/jobs";
+import { HelpButton } from "../ui/help";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const ctx = await context(request);
@@ -142,13 +143,14 @@ export default function Overview() {
             {syncedAt ? ` · Last scan ${syncedAt}` : " · Not scanned yet"}
           </p>
         </div>
-        {hasProducts && (
-          <div className="page-actions">
-            {/* The hero already offers its own action; avoid a duplicate. */}
-            {next.kind !== "live" && <LiveButton live={live} disabled={scan.running || !summary.liveCheckable} />}
-            {next.kind !== "scan" && <ScanButton scan={scan} />}
-          </div>
-        )}
+        <div className="page-actions">
+          <HelpButton topic="overview" />
+          {/* The hero already offers its own action; avoid a duplicate. */}
+          {hasProducts && next.kind !== "live" && (
+            <LiveButton live={live} disabled={scan.running || !summary.liveCheckable} />
+          )}
+          {hasProducts && next.kind !== "scan" && <ScanButton scan={scan} />}
+        </div>
       </div>
       <JobPanels scan={scan} live={live} />
       {data.missingScopes.length > 0 && (

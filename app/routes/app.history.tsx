@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 import { Collapsible } from "../ui/motion";
+import { HelpButton } from "../ui/help";
 import {
   Form,
   useActionData,
@@ -125,6 +126,9 @@ export default function History() {
             Every description Soodo published, with the version it replaced. Restoring is blocked if the
             product was edited afterwards.
           </p>
+        </div>
+        <div className="page-actions">
+          <HelpButton topic="history" />
         </div>
       </div>
       <Notice result={result} />

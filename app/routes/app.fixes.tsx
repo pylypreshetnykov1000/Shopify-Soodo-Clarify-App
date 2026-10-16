@@ -9,6 +9,7 @@ import { GROUPS, type CheckGroup, type Priority } from "../core/geo";
 import { AppLink, Icon, Mark, Notice, PRIORITY_LABEL } from "../ui/common";
 import { Collapsible } from "../ui/motion";
 import { JobPanels, LiveButton, ScanButton, useLiveChecks, useScan } from "../ui/jobs";
+import { HelpButton } from "../ui/help";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const ctx = await context(request);
@@ -153,6 +154,7 @@ export default function FixPlan() {
           </p>
         </div>
         <div className="page-actions">
+          <HelpButton topic="fixes" />
           {data.summary.total > 0 && <LiveButton live={live} disabled={scan.running || !data.summary.liveCheckable} />}
           <ScanButton scan={scan} primary={!data.summary.total} />
         </div>

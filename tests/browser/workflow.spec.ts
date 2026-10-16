@@ -231,7 +231,7 @@ test("all workspace screens fit phone, tablet and desktop without font downloads
   await page.emulateMedia({ reducedMotion: "reduce" });
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const path of ["/app", "/app/products", "/app/fixes", "/app/history", "/app/settings"]) {
+    for (const path of ["/app", "/app/products", "/app/fixes", "/app/history", "/app/settings", "/app/help"]) {
       await page.goto(path);
       await expect(page.locator("h1")).toBeVisible();
       expect(await fits(page), `${path} at ${width}px`).toBe(true);
@@ -467,4 +467,54 @@ test("the overview hero and charts show readiness, its trend and its spread", as
   expect(total).toBe(3);
   // The favicon carries the brand mark.
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", /^data:image\/svg\+xml/);
+});
+
+test("help opens the right chapter for each screen and links to the full guide", async ({ page }) => {
+  const expectations: [string, string][] = [
+    ["/app", "Overview"],
+    ["/app/products", "Products"],
+    ["/app/fixes", "Fix plan"],
+    ["/app/history", "Change history"],
+    ["/app/settings", "Settings and permissions"],
+  ];
+  for (const [path, title] of expectations) {
+    await page.goto(path);
+    await page.getByRole("button", { name: "Help", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: title, exact: true })).toBeVisible();
+    // Every chapter shows at least one annotated screenshot that loaded.
+    const image = dialog.locator(".guide-shot img").first();
+    await expect(image).toBeVisible();
+    expect(await image.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+  }
+  // On a product, help follows the open tab.
+  await page.goto("/app/products");
+  await page.getByRole("link", { name: /Trail 28 Backpack/ }).first().click();
+  await page.getByRole("tab", { name: /Live page/ }).click();
+  await page.getByRole("button", { name: "Help", exact: true }).click();
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "Live page", exact: true })).toBeVisible();
+  // Related topics switch the panel in place.
+  await page.getByRole("dialog").getByRole("button", { name: /Fix plan/ }).click();
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "Fix plan", exact: true })).toBeVisible();
+  await page.getByRole("dialog").getByRole("link", { name: "Open full guide" }).click();
+  await expect(page).toHaveURL(/\/app\/help#fixes$/);
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page.getByRole("heading", { name: "Help and guide" })).toBeVisible();
+  // Introduction, ten chapters, troubleshooting and glossary.
+  await expect(page.locator(".guide-section")).toHaveCount(13);
+  await expect(page.getByRole("link", { name: "Help", exact: true })).toHaveAttribute("aria-current", "page");
+});
+
+test("pressing ? opens help for the current screen, but not while typing", async ({ page }) => {
+  await page.goto("/app/products");
+  await page.getByRole("textbox", { name: "Search products" }).fill("Pack?");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await page.getByRole("heading", { name: "Products", exact: true }).click();
+  await page.keyboard.press("?");
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "Products", exact: true })).toBeVisible();
+  // Focus moves into the panel, and the close button returns to the page.
+  await page.getByRole("button", { name: "Close help" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
 });

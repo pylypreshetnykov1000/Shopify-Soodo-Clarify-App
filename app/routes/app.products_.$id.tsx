@@ -34,6 +34,7 @@ import {
   Thumb,
 } from "../ui/common";
 import { Collapsible, Steps, TabPanel, Tabs } from "../ui/motion";
+import { HelpButton } from "../ui/help";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
   const { shop, demo } = await context(request);
@@ -811,6 +812,8 @@ export default function ProductWorkspace() {
         <div className="head-score">
           <Dial value={report.readiness} label="Product readiness" />
           <div className="page-actions">
+            {/* Help follows the open tab; a pending draft is the publish step. */}
+            <HelpButton topic={tab === "specs" ? (pending ? "publish" : "specs") : tab === "live" ? "live" : "product"} />
             {data.adminUrl && (
               <ExternalLink href={data.adminUrl} className="button">
                 Edit in Shopify

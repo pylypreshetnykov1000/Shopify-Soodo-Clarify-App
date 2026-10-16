@@ -7,6 +7,7 @@ import { catalogOverview, type LiveStatus } from "../services/geo.server";
 import { seedDemo } from "../services/demo.server";
 import { AppLink, Badge, Icon, Mark, Meter, Notice, Priority, Thumb } from "../ui/common";
 import { JobPanels, ScanButton, useScan } from "../ui/jobs";
+import { HelpButton } from "../ui/help";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const ctx = await context(request);
@@ -112,6 +113,7 @@ export default function Products() {
           </p>
         </div>
         <div className="page-actions">
+          <HelpButton topic="products" />
           <ScanButton scan={scan} primary={!products.length} />
         </div>
       </div>

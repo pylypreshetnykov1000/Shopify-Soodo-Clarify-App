@@ -3560,6 +3560,431 @@ th:last-child {
   }
 }
 
+/* ----------------------------------------------------------------- help
+   A right-hand panel (native dialog) and the full guide page share the
+   same plate pattern: annotated screenshot plus numbered legend. */
+
+.help-button svg {
+  color: var(--accent);
+}
+.help-panel {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(560px, 100vw);
+  max-width: 100vw;
+  height: 100%;
+  max-height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: -18px 0 48px rgba(28, 28, 26, 0.16);
+}
+.help-panel[open] {
+  display: flex;
+  animation: help-in 280ms var(--ease) both;
+}
+.help-panel.closing {
+  animation: help-out 180ms ease-in both;
+}
+.help-panel::backdrop {
+  background: rgba(24, 30, 27, 0.28);
+  animation: fade-in 200ms var(--ease) both;
+}
+@keyframes help-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@keyframes help-out {
+  to {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+.help-inner {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.help-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 22px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.help-head h2 {
+  font-size: 19px;
+  letter-spacing: -0.3px;
+  margin-top: 2px;
+}
+.help-head .eyebrow {
+  color: var(--accent);
+  margin-bottom: 0;
+}
+.help-close {
+  width: 34px;
+  padding: 0;
+  flex-shrink: 0;
+}
+.help-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 22px 24px;
+}
+.help-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 22px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.help-section {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.help-section h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.help-related {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.help-jump {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.help-jump select {
+  flex: 1;
+}
+.help-faq {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.help-faq + .help-faq {
+  margin-top: 6px;
+}
+.help-faq summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  font-weight: 580;
+}
+.help-faq p {
+  padding: 0 12px 10px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* Guide content (panel and page) */
+.guide-why {
+  font-size: 14px;
+  color: var(--ink-2);
+  max-width: 64ch;
+}
+.guide-plate {
+  margin-top: 16px;
+}
+.guide-plate figure {
+  margin: 0;
+}
+.guide-shot {
+  display: block;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  cursor: zoom-in;
+  transition: border-color var(--fast) var(--ease);
+}
+.guide-shot:hover {
+  border-color: var(--line-strong);
+}
+.guide-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 2px;
+}
+.guide-plate figcaption {
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.guide-legend {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+.guide-legend li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+}
+.guide-callout {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ea6a1f; /* matches the callouts drawn on the screenshots */
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.guide-legend-title {
+  font-size: 13.5px;
+  font-weight: 620;
+  line-height: 1.4;
+}
+.guide-legend p {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.guide-note {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  font-size: 13px;
+}
+.guide-note.warning {
+  background: var(--medium-soft);
+  border-color: #ecd3a5;
+}
+.guide-note strong {
+  display: block;
+  font-size: 11.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.guide-note.warning strong {
+  color: var(--medium);
+}
+.guide-note p {
+  margin-top: 2px;
+  color: var(--ink-2);
+}
+
+/* Help page */
+.guide-layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.guide-toc {
+  position: sticky;
+  top: calc(16px + env(safe-area-inset-top, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.guide-toc a {
+  display: flex;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  color: var(--ink-2);
+  transition: background-color var(--fast) var(--ease);
+}
+.guide-toc a:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+.guide-toc .num {
+  width: 18px;
+  color: #c45a19;
+  font-size: 11.5px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+.guide-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+}
+.guide-section {
+  padding: 22px 24px 24px;
+  scroll-margin-top: 16px;
+}
+.guide-section > h2,
+.guide-intro h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.guide-chapter-head {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.guide-chapter-head .eyebrow {
+  color: #c45a19;
+  margin-bottom: 2px;
+}
+.guide-chapter-head h2 {
+  font-size: 22px;
+  letter-spacing: -0.4px;
+}
+.guide-number {
+  font-size: 44px;
+  line-height: 0.85;
+  font-weight: 750;
+  letter-spacing: -2px;
+  color: var(--accent);
+}
+.guide-section .guide-plate {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(220px, 1fr);
+  gap: 22px;
+  align-items: start;
+  margin-top: 18px;
+}
+.guide-section .guide-legend {
+  margin-top: 0;
+}
+.guide-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+}
+.guide-intro p {
+  font-size: 13.5px;
+  color: var(--ink-2);
+  margin-top: 8px;
+}
+.guide-priorities {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.guide-priorities strong {
+  color: var(--ink);
+  margin-right: 4px;
+}
+.guide-workflow {
+  display: grid;
+  gap: 8px;
+}
+.guide-workflow li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.guide-workflow .step-dot {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.guide-workflow strong {
+  font-size: 13.5px;
+}
+.guide-workflow p {
+  margin-top: 1px;
+  font-size: 12.5px;
+}
+.guide-faq {
+  margin-top: 6px;
+}
+.guide-glossary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+  margin-top: 6px;
+}
+.guide-glossary div {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.guide-glossary dt {
+  font-size: 13.5px;
+  font-weight: 620;
+}
+.guide-glossary dd {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 1100px) {
+  .guide-section .guide-plate {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .guide-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .guide-toc {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .guide-toc a {
+    border: 1px solid var(--line);
+    background: var(--surface);
+    font-size: 12.5px;
+    padding: 5px 8px;
+  }
+}
+@media (max-width: 720px) {
+  .guide-section {
+    padding: 16px 14px 18px;
+  }
+  .guide-intro,
+  .guide-glossary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .guide-number {
+    font-size: 34px;
+  }
+  .help-head,
+  .help-body,
+  .help-foot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .help-button {
+    padding-inline: 9px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

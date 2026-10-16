@@ -11,6 +11,7 @@ import {
   rulesFor,
 } from "../core/profiles";
 import { AppLink, Badge, Notice, Spinner } from "../ui/common";
+import { HelpButton } from "../ui/help";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { shop, demo, missingScopes } = await context(request);
@@ -51,6 +52,9 @@ export default function Settings() {
         <div>
           <h1>Settings</h1>
           <p>Checklist, permissions and how changes are published.</p>
+        </div>
+        <div className="page-actions">
+          <HelpButton topic="settings" />
         </div>
       </div>
       <Notice result={result} />
