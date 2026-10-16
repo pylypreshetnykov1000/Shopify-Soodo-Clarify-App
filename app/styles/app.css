@@ -3298,6 +3298,268 @@ th:last-child {
   }
 }
 
+/* ------------------------------------------------------- dashboard system
+   One spacing step (--gap), one panel pattern, one row height. Everything on
+   the Overview sits on the same two-column grid as the four area tiles. */
+
+:root {
+  --gap: 16px;
+}
+.steps-card {
+  margin-bottom: var(--gap);
+}
+.area-grid {
+  gap: var(--gap);
+  margin-bottom: var(--gap);
+}
+.area-tile {
+  gap: 0;
+  padding: 16px 18px 14px;
+}
+.area-label {
+  font-size: 12.5px;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.area-value {
+  display: block;
+  margin: 8px 0 12px;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 620;
+  letter-spacing: -0.6px;
+}
+.area-value small {
+  font-size: 14px;
+  font-weight: 560;
+  margin-left: 1px;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+.area-tile .meter {
+  height: 4px;
+}
+.area-note {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.area-issues {
+  color: var(--ink-2);
+  font-weight: 560;
+  white-space: nowrap;
+}
+.overview-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+  align-items: start;
+}
+.overview-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  min-width: 0;
+}
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  min-width: 0;
+  overflow: hidden;
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px 14px;
+}
+.panel-head h2 {
+  font-size: 14.5px;
+  font-weight: 620;
+}
+.panel-head p {
+  margin-top: 3px;
+  font-size: 12.5px;
+}
+.panel-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 3px 0;
+  font-size: 12.5px;
+  font-weight: 560;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.panel-link svg {
+  transition: transform var(--base) var(--ease);
+}
+.panel-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.panel-link:hover svg {
+  transform: translateX(2px);
+}
+.panel-body {
+  padding: 0 20px 18px;
+}
+.panel-rows > li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 58px;
+  padding: 10px 20px;
+  border-top: 1px solid var(--line);
+}
+.panel-rows .mark {
+  margin-top: 0;
+}
+/* Signal rows reuse the older .signal class; keep the panel row rhythm. */
+.panel-rows > li.signal,
+.panel-rows > li.signal:first-child {
+  display: flex;
+  padding: 10px 20px;
+  border-top: 1px solid var(--line);
+}
+.impact-bar {
+  flex-shrink: 0;
+}
+@media (min-width: 901px) {
+  /* The two chart panels open the columns; give them one height so the
+     columns start on a shared line. */
+  .overview-column > .panel:first-child {
+    min-height: 290px;
+  }
+}
+.panel-rows .row-main strong {
+  font-size: 13.5px;
+}
+.panel-rows .row-main small {
+  margin-top: 1px;
+  overflow-wrap: anywhere;
+}
+.panel-rows > li.link-row {
+  padding: 0;
+}
+.row-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 58px;
+  padding: 10px 20px;
+  transition: background-color var(--fast) var(--ease);
+}
+.row-link:hover {
+  background: var(--surface-2);
+}
+.row-link:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.row-link:focus-visible {
+  outline-offset: -2px;
+}
+.row-link .score {
+  width: 110px;
+  flex-shrink: 0;
+}
+.panel .healthy {
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--line);
+}
+.panel-head + .healthy {
+  border-top: 1px solid var(--line);
+}
+.panel-empty {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--line);
+}
+.panel-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.panel-empty strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+}
+.panel-empty p {
+  margin-top: 2px;
+  font-size: 12.5px;
+}
+.panel .trend {
+  margin-top: 2px;
+}
+.panel .distribution-chart {
+  padding-top: 4px;
+}
+
+@media (max-width: 1100px) {
+  .area-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 900px) {
+  .overview-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 720px) {
+  :root {
+    --gap: 12px;
+  }
+  .panel-head {
+    padding: 14px 14px 12px;
+  }
+  .panel-body {
+    padding: 0 14px 14px;
+  }
+  .panel-rows > li,
+  .panel-rows > li.signal,
+  .row-link {
+    padding: 10px 14px;
+  }
+  .panel-rows .impact-bar {
+    display: none;
+  }
+  .row-link .score {
+    width: 76px;
+  }
+  .panel .healthy {
+    padding: 12px 14px 14px;
+  }
+  .panel-empty {
+    padding: 14px;
+  }
+  .area-tile {
+    padding: 12px 14px;
+  }
+  .area-value {
+    font-size: 24px;
+  }
+  .area-note {
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -178,7 +178,7 @@ test("overview and product workspace fit narrow screens and link to the next fix
   await page.goto("/app");
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
   expect(await fits(page)).toBe(true);
-  await page.locator(".rows").getByRole("link").first().click();
+  await page.locator(".panel-rows").getByRole("link").first().click();
   await expect(page.locator("h1")).toBeVisible();
   expect(await fits(page)).toBe(true);
   await page.goto("/app/products");

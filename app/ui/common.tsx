@@ -106,6 +106,60 @@ export function Badge({
 }) {
   return <span className={`badge ${tone}`}>{children}</span>;
 }
+/**
+ * The one card pattern for dashboards: title, optional description and a
+ * right-aligned action, then content. Every panel shares spacing and rows.
+ */
+export function Panel({
+  id,
+  title,
+  description,
+  action,
+  children,
+  className = "",
+}: {
+  id: string;
+  title: string;
+  description?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`panel ${className}`} aria-labelledby={id}>
+      <header className="panel-head">
+        <div>
+          <h2 id={id}>{title}</h2>
+          {description && <p>{description}</p>}
+        </div>
+        {action}
+      </header>
+      {children}
+    </section>
+  );
+}
+export function PanelLink({ to, children }: { to: string; children: ReactNode }) {
+  return (
+    <AppLink to={to} className="panel-link">
+      {children}
+      <Icon name="arrow" size={13} />
+    </AppLink>
+  );
+}
+/** Compact, consistent empty state for panels. */
+export function Empty({ icon = "check", title, children }: { icon?: IconName; title: string; children?: ReactNode }) {
+  return (
+    <div className="panel-empty">
+      <span className="panel-empty-icon">
+        <Icon name={icon} size={16} />
+      </span>
+      <div>
+        <strong>{title}</strong>
+        {children && <p>{children}</p>}
+      </div>
+    </div>
+  );
+}
 export const PRIORITY_LABEL = { high: "High", medium: "Medium", low: "Low" } as const;
 export function Mark({
   kind,
@@ -133,10 +187,22 @@ export function Priority({ level }: { level: "high" | "medium" | "low" }) {
 }
 export const scoreTone = (score: number) =>
   score >= 80 ? "" : score >= 50 ? "medium" : "high";
-export function Meter({ value, label }: { value: number; label: string }) {
+/**
+ * A 0–100 bar. "severity" colours a product score by how worrying it is;
+ * "brand" shows a plain magnitude (such as a share passing) in brand green.
+ */
+export function Meter({
+  value,
+  label,
+  tone = "severity",
+}: {
+  value: number;
+  label: string;
+  tone?: "severity" | "brand";
+}) {
   return (
     <div
-      className={`meter ${scoreTone(value)}`}
+      className={`meter ${tone === "severity" ? scoreTone(value) : ""}`}
       role="meter"
       aria-valuemin={0}
       aria-valuemax={100}

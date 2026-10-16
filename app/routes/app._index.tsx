@@ -11,11 +11,14 @@ import { GROUPS } from "../core/geo";
 import {
   AppLink,
   Badge,
+  Empty,
   formatDate,
   Icon,
   Mark,
   Meter,
   Notice,
+  Panel,
+  PanelLink,
   PRIORITY_LABEL,
   Spinner,
   Thumb,
@@ -202,8 +205,8 @@ export default function Overview() {
                   className="area-tile"
                   label={`${GROUPS[area.group].label}: ${pct}% of products pass`}
                 >
-                  <span className="stat-label">{GROUPS[area.group].label}</span>
-                  <strong className="stat-value">
+                  <span className="area-label">{GROUPS[area.group].label}</span>
+                  <strong className="area-value">
                     {area.total ? (
                       <>
                         <CountUp value={pct} />
@@ -213,11 +216,14 @@ export default function Overview() {
                       "—"
                     )}
                   </strong>
-                  <Meter value={pct} label={`${GROUPS[area.group].label} products passing`} />
-                  <span className="stat-note">
-                    {area.total
-                      ? `${area.passing} of ${area.total} pass${area.issues ? ` · ${area.issues} issue${area.issues === 1 ? "" : "s"}` : ""}`
-                      : "Not checked yet"}
+                  <Meter value={pct} tone="brand" label={`${GROUPS[area.group].label} products passing`} />
+                  <span className="area-note">
+                    {area.total ? `${area.passing} of ${area.total} products pass` : "Not checked yet"}
+                    {area.issues > 0 && (
+                      <span className="area-issues">
+                        {area.issues} issue{area.issues === 1 ? "" : "s"}
+                      </span>
+                    )}
                   </span>
                   <Icon name="arrow" size={14} />
                 </AppLink>
@@ -225,206 +231,180 @@ export default function Overview() {
             })}
           </section>
 
-          <div className="chart-row">
-            <section className="card" aria-labelledby="trend-title">
-              <div className="card-heading flush">
-                <div>
-                  <h2 id="trend-title">Readiness over time</h2>
-                  <p>One reading per day, saved after scans, live checks and published changes.</p>
-                </div>
-              </div>
-              <div className="chart-body">
-                {data.trend.length > 1 ? (
-                  <TrendChart points={data.trend} label="Catalog readiness over time" />
-                ) : (
-                  <div className="chart-empty">
+          {/* Two equal columns whose edges line up with the tiles above. Each
+              column stacks independently, so short panels leave no gaps. */}
+          <div className="overview-columns">
+            <div className="overview-column">
+              <Panel
+                id="trend-title"
+                title="Readiness over time"
+                description="One reading per day, saved after scans, live checks and published changes."
+              >
+                <div className="panel-body">
+                  {data.trend.length > 1 ? (
                     <TrendChart points={data.trend} label="Catalog readiness over time" />
-                    <p>
-                      Your trend starts {data.trend.length ? "today" : "with your next scan"}. Each day you scan, check
-                      live pages or publish a change adds a point.
-                    </p>
+                  ) : (
+                    <div className="chart-empty">
+                      <TrendChart points={data.trend} label="Catalog readiness over time" />
+                      <p>
+                        Your trend starts {data.trend.length ? "today" : "with your next scan"}. Each day you scan,
+                        check live pages or publish a change adds a point.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Panel>
+
+              <Panel
+                id="top-fixes"
+                title="Top fixes"
+                description="Highest impact first: priority × products affected."
+                action={data.fixPlan.length > 0 && <PanelLink to="/app/fixes">All {data.fixPlan.length}</PanelLink>}
+              >
+                {data.fixPlan.length ? (
+                  <ul className="panel-rows stagger">
+                    {data.fixPlan.slice(0, 5).map((fix) => (
+                      <li key={fix.id}>
+                        <Mark kind={fix.priority} label={`${PRIORITY_LABEL[fix.priority]} priority`} />
+                        <div className="row-main">
+                          <strong>{fix.label}</strong>
+                          <small>
+                            {PRIORITY_LABEL[fix.priority]} · {GROUPS[fix.group].label}
+                          </small>
+                        </div>
+                        <div className="impact" title={`${fix.products.length} of ${summary.active} active products`}>
+                          <span className="impact-bar">
+                            <span style={{ width: `${(fix.products.length / Math.max(1, summary.active)) * 100}%` }} />
+                          </span>
+                          <span className="num">
+                            {fix.products.length}/{summary.active}
+                          </span>
+                        </div>
+                        <AppLink
+                          to={
+                            fix.products.length === 1 ? `/app/products/${fix.products[0].recordId}` : `/app/fixes#${fix.id}`
+                          }
+                          className="button compact"
+                          label={`Fix ${fix.label}`}
+                        >
+                          Fix
+                        </AppLink>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Empty title="Nothing to fix right now">Every active product passes the checks that could be run.</Empty>
+                )}
+              </Panel>
+
+              <Panel
+                id="store-signals"
+                title="Store-wide signals"
+                description={`${healthy.length} of ${data.signals.length} healthy. Shared by every product.`}
+              >
+                {signalIssues.length > 0 && (
+                  <ul className="panel-rows stagger">
+                    {signalIssues.map((signal) => (
+                      <li className="signal" key={signal.id}>
+                        <Mark
+                          kind={signal.status === "unknown" ? "unknown" : "medium"}
+                          label={signal.status === "unknown" ? "Not checked" : "Needs attention"}
+                        />
+                        <div className="row-main">
+                          <strong>{signal.label}</strong>
+                          <small>
+                            {signal.evidence}
+                            {signal.status === "action" && ` ${signal.action}`}
+                          </small>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {healthy.length > 0 && (
+                  <div className="healthy">
+                    {healthy.map((signal) => (
+                      <span key={signal.id} className="healthy-chip" title={signal.evidence}>
+                        <Icon name="check" size={13} />
+                        {signal.label}
+                      </span>
+                    ))}
                   </div>
                 )}
-              </div>
-            </section>
-            <section className="card" aria-labelledby="distribution-title">
-              <div className="card-heading flush">
-                <div>
-                  <h2 id="distribution-title">Products by readiness</h2>
-                  <p>
-                    {summary.active} active product{summary.active === 1 ? "" : "s"}, so a high average can’t hide weak
-                    ones.
-                  </p>
-                </div>
-              </div>
-              <div className="chart-body">
-                <Distribution values={activeReadiness} />
-              </div>
-            </section>
-          </div>
+              </Panel>
+            </div>
 
-          <div className="grid-2">
-            <section className="card" aria-labelledby="top-fixes">
-              <div className="card-heading">
-                <div>
-                  <h2 id="top-fixes">Top fixes</h2>
-                  <p>Highest impact first: priority × products affected.</p>
+            <div className="overview-column">
+              <Panel
+                id="distribution-title"
+                title="Products by readiness"
+                description={`${summary.active} active product${summary.active === 1 ? "" : "s"}, so a high average can’t hide weak ones.`}
+              >
+                <div className="panel-body">
+                  <Distribution values={activeReadiness} />
                 </div>
-                {data.fixPlan.length > 0 && (
-                  <AppLink to="/app/fixes" className="text-link">
-                    All {data.fixPlan.length} <Icon name="arrow" size={14} />
-                  </AppLink>
+              </Panel>
+
+              <Panel
+                id="attention"
+                title="Needs attention"
+                description="Active products with the lowest readiness."
+                action={<PanelLink to="/app/products">All products</PanelLink>}
+              >
+                {data.attention.length ? (
+                  <ul className="panel-rows stagger">
+                    {data.attention.map((product) => (
+                      <li key={product.recordId} className="link-row">
+                        <AppLink to={`/app/products/${product.recordId}`} className="row-link">
+                          <Thumb image={product.image} />
+                          <span className="row-main">
+                            <strong>{product.title}</strong>
+                            <small>
+                              {product.actions} to fix{product.top ? ` · ${product.top.label}` : ""}
+                            </small>
+                          </span>
+                          <span className="score">
+                            <strong>{product.readiness}</strong>
+                            <Meter value={product.readiness} label={`${product.title} readiness`} />
+                          </span>
+                        </AppLink>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Empty title="No product needs attention">Every active product passes the checks that could be run.</Empty>
                 )}
-              </div>
-              {data.fixPlan.length ? (
-                <ul className="rows stagger">
-                  {data.fixPlan.slice(0, 5).map((fix) => (
-                    <li key={fix.id}>
-                      <Mark kind={fix.priority} label={`${PRIORITY_LABEL[fix.priority]} priority`} />
-                      <div className="row-main">
-                        <strong>{fix.label}</strong>
-                        <small>{GROUPS[fix.group].label}</small>
-                      </div>
-                      <div className="impact" title={`${fix.products.length} of ${summary.active} active products`}>
-                        <span className="impact-bar">
-                          <span style={{ width: `${(fix.products.length / Math.max(1, summary.active)) * 100}%` }} />
-                        </span>
-                        <span className="num">
-                          {fix.products.length}/{summary.active}
-                        </span>
-                      </div>
-                      <AppLink
-                        to={fix.products.length === 1 ? `/app/products/${fix.products[0].recordId}` : `/app/fixes#${fix.id}`}
-                        className="button compact"
-                        label={`Fix ${fix.label}`}
-                      >
-                        Fix
-                      </AppLink>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="empty">
-                  <Icon name="check" size={26} />
-                  <h3>Nothing to fix right now</h3>
-                  <p>Every active product passes the checks that could be run.</p>
-                </div>
-              )}
-            </section>
+              </Panel>
 
-            <section className="card" aria-labelledby="attention">
-              <div className="card-heading">
-                <div>
-                  <h2 id="attention">Needs attention</h2>
-                  <p>Active products with the lowest readiness.</p>
-                </div>
-                <AppLink to="/app/products" className="text-link">
-                  All products <Icon name="arrow" size={14} />
-                </AppLink>
-              </div>
-              {data.attention.length ? (
-                <ul className="rows stagger">
-                  {data.attention.map((product) => (
-                    <li key={product.recordId}>
-                      <AppLink to={`/app/products/${product.recordId}`} className="attention-link">
-                        <Thumb image={product.image} />
-                        <span className="row-main">
-                          <strong>{product.title}</strong>
+              <Panel
+                id="recent"
+                title="Recent changes"
+                description="Descriptions published from Soodo."
+                action={data.changes.length > 0 && <PanelLink to="/app/history">History</PanelLink>}
+              >
+                {data.changes.length ? (
+                  <ul className="panel-rows stagger">
+                    {data.changes.map((item) => (
+                      <li key={item.id}>
+                        <span className="activity-dot" aria-hidden="true" />
+                        <div className="row-main">
+                          <strong>{item.product.title}</strong>
                           <small>
-                            {product.actions} to fix{product.top ? ` · ${product.top.label}` : ""}
+                            {CHANGE_LABEL[item.status] ?? item.status.toLowerCase().replace(/_/g, " ")} ·{" "}
+                            {formatDate(item.createdAt)}
                           </small>
-                        </span>
-                        <span className="score">
-                          <strong>{product.readiness}</strong>
-                          <Meter value={product.readiness} label={`${product.title} readiness`} />
-                        </span>
-                      </AppLink>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="empty">
-                  <Icon name="check" size={26} />
-                  <h3>No product needs attention</h3>
-                  <p>Every active product passes the checks that could be run.</p>
-                </div>
-              )}
-            </section>
-          </div>
-
-          <div className="grid-2" style={{ marginTop: 16 }}>
-            <section className="card" aria-labelledby="store-signals">
-              <div className="card-heading">
-                <div>
-                  <h2 id="store-signals">Store-wide signals</h2>
-                  <p>
-                    {healthy.length} of {data.signals.length} healthy. Shared by every product.
-                  </p>
-                </div>
-              </div>
-              {signalIssues.length > 0 && (
-                <ul className="stagger">
-                  {signalIssues.map((signal) => (
-                    <li className="signal" key={signal.id}>
-                      <Mark
-                        kind={signal.status === "unknown" ? "unknown" : "medium"}
-                        label={signal.status === "unknown" ? "Not checked" : "Needs attention"}
-                      />
-                      <div>
-                        <strong>{signal.label}</strong>
-                        <p>{signal.evidence}</p>
-                        {signal.status === "action" && <p>{signal.action}</p>}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {healthy.length > 0 && (
-                <div className="healthy">
-                  {healthy.map((signal) => (
-                    <span key={signal.id} className="healthy-chip" title={signal.evidence}>
-                      <Icon name="check" size={13} />
-                      {signal.label}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section className="card" aria-labelledby="recent">
-              <div className="card-heading">
-                <div>
-                  <h2 id="recent">Recent changes</h2>
-                  <p>Descriptions published from Soodo.</p>
-                </div>
-                {data.changes.length > 0 && (
-                  <AppLink to="/app/history" className="text-link">
-                    History <Icon name="arrow" size={14} />
-                  </AppLink>
+                        </div>
+                        {!["PUBLISHED", "RESTORED"].includes(item.status) && <Badge tone="warning">Check</Badge>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Empty icon="history" title="Nothing published yet">
+                    Approved description updates will appear here.
+                  </Empty>
                 )}
-              </div>
-              {data.changes.length ? (
-                <ul className="rows stagger">
-                  {data.changes.map((item) => (
-                    <li key={item.id}>
-                      <span className="activity-dot" aria-hidden="true" />
-                      <div className="row-main">
-                        <strong>{item.product.title}</strong>
-                        <small>
-                          {CHANGE_LABEL[item.status] ?? item.status.toLowerCase().replace(/_/g, " ")} ·{" "}
-                          {formatDate(item.createdAt)}
-                        </small>
-                      </div>
-                      {!["PUBLISHED", "RESTORED"].includes(item.status) && <Badge tone="warning">Check</Badge>}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="empty compact">
-                  <p>Nothing published yet. Approved description updates will appear here.</p>
-                </div>
-              )}
-            </section>
+              </Panel>
+            </div>
           </div>
         </>
       )}
