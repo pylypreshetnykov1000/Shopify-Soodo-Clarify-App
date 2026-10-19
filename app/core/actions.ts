@@ -55,6 +55,8 @@ type Input = {
   }[];
   signals: { id: string; status: string; action: string }[];
   drafts: { recordId: string; title: string }[];
+  /** False until the first AI visibility test; undefined when unknown. */
+  visibilityTested?: boolean;
 };
 
 const productTab = (destination: Destination) =>
@@ -95,6 +97,14 @@ export function planActions(input: Input, limit = 3): NextAction[] {
       detail: "It’s ready to review. Nothing changes until you approve it.",
       to: `/app/products/${draft.recordId}#draft`,
       button: "Review",
+    });
+  if (input.visibilityTested === false && summary.total && !input.syncStarted)
+    actions.push({
+      id: "visibility",
+      title: "See if AI assistants recommend you",
+      detail: "Soodo asks Gemini the questions your shoppers ask and shows who it recommends. About a minute.",
+      to: "/app/visibility",
+      button: "Test",
     });
   for (const fix of fixPlan) {
     const count = fix.products.length;

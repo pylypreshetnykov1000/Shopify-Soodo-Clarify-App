@@ -152,6 +152,7 @@ await annotate([
   ['section[aria-labelledby="visibility-history"]', 3],
   ['section[aria-labelledby="trend-title"]', 4],
   ['section[aria-labelledby="distribution-title"]', 5],
+  ['section[aria-labelledby="published"]', 6],
 ]);
 await shot("24-performance", ".page-heading", ".overview-columns");
 await clear();
@@ -252,20 +253,6 @@ await clear();
 await hideToasts(false);
 await settle();
 
-// Content: the listing draft above waits for review.
-await page.goto(base + "/app/content");
-await settle();
-await hideToasts(true);
-await annotate([
-  [".content-summary", 1],
-  ['section[aria-labelledby="review"]', 2],
-  ['section[aria-labelledby="needs-content"]', 3],
-  ['section[aria-labelledby="published"]', 4],
-]);
-await shot("23-content", ".page-heading", ".content-columns");
-await clear();
-await hideToasts(false);
-
 // Live page (the tent carries duplicate product markup in the demo).
 await page.goto(base + "/app/products");
 await page.getByRole("link", { name: /Basecamp Two Tent/ }).first().click();
@@ -286,8 +273,8 @@ await settle();
 await page.locator(".fix-trigger").first().click();
 await settle();
 await annotate([
-  [".store-fixes", 1], ['[aria-label="Filter by area"]', 2], [".priority-filter", 3],
-  [".fix-trigger .impact", 4, 0], [".fix-how", 5], [".affected", 6],
+  [".review-card", 1], [".store-fixes", 2], ['[aria-label="Filter by area"]', 3], [".priority-filter", 4],
+  [".fix-trigger .impact", 5, 0], [".fix-how", 6], [".affected", 7],
 ]);
 await shot("13-fix-plan", ".page-heading", ".fix:nth-child(2)");
 await clear();

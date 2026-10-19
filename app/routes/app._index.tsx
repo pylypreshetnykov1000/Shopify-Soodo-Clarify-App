@@ -38,6 +38,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       fixPlan: overview.fixPlan,
       signals: overview.signals,
       drafts: overview.products.filter((p) => p.draft).map((p) => ({ recordId: p.recordId, title: p.title })),
+      visibilityTested: !!visibility.latest,
     }),
     change: delta(trend),
     sales,

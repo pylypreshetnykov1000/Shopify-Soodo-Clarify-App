@@ -47,7 +47,7 @@ test("merchant can search, draft, approve, publish and restore", async ({
   await page.getByRole("button", { name: "Publish to demo catalog" }).click();
   await expect(page.locator(".notice.success")).toContainText("published and verified");
   await expect(page.getByText("5 / 5 found", { exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Content", exact: true }).click();
+  await page.getByRole("link", { name: "Performance", exact: true }).click();
   await expect(page.getByRole("region", { name: "Recently published" })).toContainText("Summit Shell Jacket");
   await page.getByRole("link", { name: "History", exact: true }).click();
   const latest = page.locator(".history-card").first();
@@ -467,7 +467,6 @@ test("help opens the right chapter for each screen and links to the full guide",
     ["/app", "Dashboard"],
     ["/app/visibility", "AI visibility"],
     ["/app/fixes", "Action plan"],
-    ["/app/content", "Content"],
     ["/app/performance", "Performance"],
     ["/app/products", "Products"],
     ["/app/history", "Change history"],
@@ -498,8 +497,8 @@ test("help opens the right chapter for each screen and links to the full guide",
   await expect(page).toHaveURL(/\/app\/help#fixes$/);
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByRole("heading", { name: "Help and guide" })).toBeVisible();
-  // Introduction, fifteen chapters, troubleshooting and glossary.
-  await expect(page.locator(".guide-section")).toHaveCount(18);
+  // Introduction, fourteen chapters, troubleshooting and glossary.
+  await expect(page.locator(".guide-section")).toHaveCount(17);
   await expect(page.getByRole("link", { name: "Help", exact: true })).toHaveAttribute("aria-current", "page");
 });
 
@@ -531,7 +530,9 @@ test("the dashboard shows a plain score, three plain next steps and who AI recom
   await expect(page.getByRole("region", { name: "Who AI recommends" })).toBeVisible();
   // The menu follows the loop: measure, plan, write, track.
   const menu = page.getByRole("navigation", { name: "Main navigation" }).getByRole("link");
-  await expect(menu).toHaveText(["Dashboard", "AI visibility", "Action plan", "Content", "Performance", "Products", "Settings", "Help"]);
+  await expect(menu).toHaveText(["Dashboard", "AI visibility", "Action plan", "Products", "Performance", "Settings", "Help"]);
+  // Until the first test, the next steps point to AI visibility.
+  await expect(page.locator(".next-list")).toContainText("See if AI assistants recommend you");
 });
 
 test("sales from AI assistants count only orders that came from an assistant", async ({ page }) => {
@@ -627,30 +628,26 @@ test("an AI visibility test shows where Gemini recommends the store and who it s
   expect(await fits(page)).toBe(true);
 });
 
-test("content gathers drafts, products that need better text and published changes", async ({ page }) => {
+test("drafts wait at the top of the action plan until they are reviewed", async ({ page }) => {
+  // The old Content page now leads to the Action plan.
   await page.goto("/app/content");
-  await expect(page.getByRole("heading", { name: "Content", exact: true })).toBeVisible();
-  const needs = page.getByRole("region", { name: "Products that need better content" });
-  await expect(needs.locator("li").first()).toBeVisible();
-  // A product's Description button opens its specifications, where drafts start.
-  await needs.getByRole("link", { name: /^Write description for/ }).first().click();
-  await expect(page.getByRole("tab", { name: /Specifications/ })).toHaveAttribute("aria-selected", "true");
-  // A draft waits on Content until it is published.
+  await expect(page).toHaveURL(/\/app\/fixes$/);
+  await expect(page.getByRole("heading", { name: "Action plan", exact: true })).toBeVisible();
   await page.goto("/app/products");
   await page.getByRole("link", { name: /Ridge Fleece/ }).first().click();
   await page.getByRole("tab", { name: /Search listing/ }).click();
   await page.getByRole("button", { name: "Create listing draft" }).click();
   await expect(page.getByRole("heading", { name: "Review search listing" })).toBeVisible();
-  await page.getByRole("link", { name: "Content", exact: true }).click();
+  await page.getByRole("link", { name: "Action plan", exact: true }).click();
   const review = page.getByRole("region", { name: "Waiting for your review" });
   await expect(review.locator("li").filter({ hasText: "Ridge Fleece" })).toContainText("Search listing");
   await review.getByRole("link", { name: "Review search listing for Ridge Fleece" }).click();
   await expect(page.getByRole("heading", { name: "Review search listing" })).toBeVisible();
   await page.getByRole("button", { name: "Reject draft" }).click();
-  await page.goto("/app/content");
+  await expect(page.getByRole("heading", { name: "Review search listing" })).toHaveCount(0);
+  await page.goto("/app/fixes");
+  await expect(page.getByRole("region", { name: "Waiting for your review" }).locator("li").filter({ hasText: "Ridge Fleece" })).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.reload();
-  expect(await fits(page)).toBe(true);
   await page.goto("/app/performance");
   expect(await fits(page)).toBe(true);
 });

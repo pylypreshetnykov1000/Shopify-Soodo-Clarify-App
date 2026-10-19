@@ -35,7 +35,6 @@ export type GuideTopic =
   | "fixes"
   | "history"
   | "settings"
-  | "content"
   | "performance";
 
 export const GUIDE_PDF = "/guide/Soodo-GEO-User-Guide.pdf";
@@ -125,8 +124,9 @@ export const CHAPTERS: GuideChapter[] = [
         alt: "Action plan with store-wide issue, area and priority filters, and an expanded fix",
         caption: "Action plan with one fix opened",
         width: 1584,
-        height: 1179,
+        height: 1407,
         legend: [
+          { title: "Waiting for your review", text: "Descriptions and search listings Soodo drafted. Review opens the draft; nothing changes until you approve it." },
           { title: "Store-wide", text: "One change in Shopify settings helps every product." },
           { title: "Area filter", text: "Show fixes for one area only." },
           { title: "Priority filter", text: "Click High, Medium or Low; click again to clear." },
@@ -141,33 +141,11 @@ export const CHAPTERS: GuideChapter[] = [
     ],
   },
   {
-    id: "content",
-    number: "04",
-    kicker: "Writing",
-    title: "Content",
-    why: "Everything Soodo writes for your products, in one place: drafts waiting for you, products whose text needs work, and what you have published.",
-    plates: [
-      {
-        image: img("23-content"),
-        alt: "Content: drafts waiting for review, products that need better content, and recently published changes",
-        caption: "Content",
-        width: 1584,
-        height: 858,
-        legend: [
-          { title: "At a glance", text: "Drafts waiting for you, products whose description, facts or search listing need work, and changes published from Soodo." },
-          { title: "Waiting for your review", text: "Descriptions and search listings drafted but not yet published. Review opens the draft on the product." },
-          { title: "Products that need better content", text: "Most issues first. Description opens the product's specifications to draft a description; Listing opens its search listing." },
-          { title: "Recently published", text: "The latest changes. Every one is saved and can be restored from History." },
-        ],
-      },
-    ],
-  },
-  {
     id: "performance",
-    number: "05",
+    number: "04",
     kicker: "Results",
     title: "Performance",
-    why: "Whether the work is paying off: readiness by area and over time, AI visibility test by test, and sales from AI assistants.",
+    why: "Whether the work is paying off: readiness by area and over time, AI visibility test by test, sales from AI assistants, and what you have published.",
     plates: [
       {
         image: img("24-performance"),
@@ -181,6 +159,7 @@ export const CHAPTERS: GuideChapter[] = [
           { title: "AI visibility over time", text: "The score of each visibility test. Run a test weekly to build the trend." },
           { title: "Readiness over time", text: "One reading per day, saved after scans, live checks and published changes." },
           { title: "Products by readiness", text: "How many products are Strong, Good, Fair or Weak, so a good average can’t hide weak products." },
+          { title: "Recently published", text: "The latest descriptions and search listings you published or restored. History has every saved version." },
         ],
       },
       {
@@ -200,7 +179,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "sales",
-    number: "06",
+    number: "05",
     kicker: "Results",
     title: "Sales from AI assistants",
     why: "The clearest sign your work is paying off: orders from shoppers who found you through an AI assistant.",
@@ -230,7 +209,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "scan",
-    number: "07",
+    number: "06",
     kicker: "Steps 1 and 2",
     title: "Scan and live checks",
     why: "Both jobs run in small batches with a progress bar, so large catalogs never time out. You can pause and continue later; finished work is kept.",
@@ -270,7 +249,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "products",
-    number: "08",
+    number: "07",
     kicker: "Catalog",
     title: "Products",
     why: "Every product with its score, its next fix and its live page status. Click anywhere on a row to open the product.",
@@ -298,7 +277,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "product",
-    number: "09",
+    number: "08",
     kicker: "Product page",
     title: "A product’s checks",
     why: "Each product has three tabs: Checks, Specifications and Live page. Checks lists what to fix, grouped by area, with the most important one already open.",
@@ -334,7 +313,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "specs",
-    number: "10",
+    number: "09",
     kicker: "Step 3 · in Soodo",
     title: "Adding specifications",
     why: "Assistants answer buyers’ questions from what is written on the page. Soodo finds the key facts for each type of product and helps you write the missing ones into the description.",
@@ -373,7 +352,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "listing",
-    number: "11",
+    number: "10",
     kicker: "Product page",
     title: "Search listing",
     why: "The title and short description people see on Google, and that AI answers often quote. Soodo suggests one from your product data; you edit and approve it.",
@@ -408,7 +387,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "publish",
-    number: "12",
+    number: "11",
     kicker: "Step 4",
     title: "Review and publish",
     why: "You always see the exact wording before anything is published. Soodo keeps your existing text and adds one clear specifications list at the end.",
@@ -442,7 +421,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "live",
-    number: "13",
+    number: "12",
     kicker: "Product page",
     title: "Live page",
     why: "What search engines and AI assistants actually see when they open the product page.",
@@ -478,7 +457,7 @@ export const CHAPTERS: GuideChapter[] = [
 
   {
     id: "history",
-    number: "14",
+    number: "13",
     kicker: "Undo",
     title: "Change history",
     why: "Every description Soodo published, with the version it replaced.",
@@ -510,7 +489,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "settings",
-    number: "15",
+    number: "14",
     kicker: "Setup",
     title: "Settings and permissions",
     why: "Choose which specification checklist applies, and see which Shopify permissions Soodo has.",
@@ -652,8 +631,7 @@ export const RELATED: Record<GuideTopic, GuideTopic[]> = {
   publish: ["history", "specs", "listing"],
   live: ["product", "fixes"],
   fixes: ["product", "specs", "live"],
-  history: ["content", "publish"],
-  content: ["publish", "listing", "history"],
+  history: ["publish", "performance"],
   performance: ["sales", "visibility", "overview"],
   settings: ["scan", "specs"],
 };

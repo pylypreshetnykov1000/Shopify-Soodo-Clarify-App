@@ -18,10 +18,9 @@ On Windows, stop the dev server before rerunning `npm run setup`: a running Pris
 
 ## What works
 
-- **Menu in the order of the work:** Dashboard, AI visibility, Action plan, Content, Performance; then Products, Settings and Help.
+- **Five pages in the order of the work:** Dashboard, AI visibility, Action plan, Products, Performance; Settings and Help below.
 - **Dashboard:** readiness score with a plain label, AI visibility, products fully ready, things to fix, "Your next steps" in plain language, who AI recommends (from the last visibility test) and AI sales figures. New stores get a one-click **Get started** that imports products, then checks live pages.
-- **Content:** drafts waiting for review, products whose description, facts or search listing need work (with links straight to the right tab), and recently published changes, linking to History.
-- **Performance:** readiness by area, sales from AI assistants by assistant, AI visibility test by test, readiness over time and products by readiness.
+- **Performance:** readiness by area, sales from AI assistants by assistant, AI visibility test by test, readiness over time, products by readiness and recently published changes (linking to History).
 - **AI visibility:** writes 12 buyer questions from the catalog (never naming the store), asks Gemini each one with Google Search, and shows a 0–100 score (questions where the store or a product was named, or its site cited), every question with the full answer, the brands recommended instead and the websites Gemini relied on. Runs in resumable batches of three questions. Needs `GEMINI_API_KEY`; the demo and tests use a scripted assistant.
 - **Sales from AI assistants:** orders whose first or last visit came from ChatGPT, Perplexity, Gemini, Copilot, Claude, Meta AI, Grok or DeepSeek (referrer or UTM source), with revenue, share of sales, revenue by assistant and recent orders. Only order number, amount, assistant and landing page are stored; customer redaction requests delete them; rows older than 90 days are removed.
 - **Search listing:** a suggested SEO title and meta description built from the product's title, brand, category, description and verified facts, editable with a Google-style preview, then draft → approve → publish → verify → restore like descriptions.
@@ -30,7 +29,7 @@ On Windows, stop the dev server before rerunning `npm run setup`: a running Pris
 - **One-click scan:** imports products in small batches with progress and pause; collects category, category attributes, variants (barcodes, SKUs, prices, availability), media, SEO fields and store policies.
 - **Live page checks:** loads the public product page and robots.txt over HTTPS (public addresses only, bounded time and size), then reports HTTP status, password protection, noindex, canonical, Product JSON-LD (duplicates, invalid blocks, price/stock mismatches with Shopify), whether published specs are visible, and access for search, assistant and training crawlers.
 - **19 product checks** in four groups (visibility, identity, content, offer & trust), each with evidence, priority and a concrete next step. Readiness weights checks by priority and ignores checks that could not run.
-- **Action plan:** every issue grouped by type across active products, so similar fixes can be done in one pass.
+- **Action plan:** drafts waiting for review first, then every issue grouped by type across active products, so similar fixes can be done in one pass.
 - **Specification checklists by category:** outdoor, apparel, beauty, electronics, home, food and general. Automatic per product from the Shopify category, or fixed in Settings. Facts come from explicit description labels, recognized metafields and Shopify category attributes, with conflict detection.
 - Draft creation from existing facts and merchant-confirmed missing values, with per-value sources; approval, rejection, publishing, remote verification, snapshots and restore.
 - Stale-source checks before publishing, per-product operation locks and durable publishing journals. Uncertain writes block further changes.

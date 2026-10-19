@@ -4687,42 +4687,14 @@ th:last-child {
 .who-list .badge {
   font-variant-numeric: tabular-nums;
 }
-.row-actions {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
+/* Action plan: drafts first, then the fixes. */
+.review-card {
+  margin-bottom: 16px;
+  box-shadow: inset 3px 0 0 var(--accent);
 }
-.summary-card.content-summary {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.review-card + .card {
+  margin-top: 0;
 }
-.content-columns {
-  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-}
-@media (max-width: 1100px) {
-  .summary-card.content-summary > .summary-stat {
-    border-top: 0;
-  }
-  .summary-card.content-summary > .summary-stat + .summary-stat {
-    border-left: 1px solid var(--line);
-  }
-}
-@media (max-width: 900px) {
-  .content-columns {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-@media (max-width: 720px) {
-  .summary-card.content-summary {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .summary-card.content-summary > .summary-stat + .summary-stat {
-    border-left: 0;
-    border-top: 1px solid var(--line);
-  }
-  .content-needs > li {
-    flex-wrap: wrap;
-  }
-  .content-needs .row-actions {
-    margin-left: 46px;
-  }
+.review-card .panel-rows > li:first-child {
+  border-top: 0;
 }

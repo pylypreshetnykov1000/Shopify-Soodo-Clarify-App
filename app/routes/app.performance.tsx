@@ -1,5 +1,6 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
+import db from "../db.server";
 import { context } from "../services/context.server";
 import { ensureStore } from "../services/catalog.server";
 import { seedDemo } from "../services/demo.server";
@@ -9,7 +10,7 @@ import { aiSalesSummary } from "../services/orders.server";
 import { visibilitySummary } from "../services/visibility.server";
 import { visibilityEngine } from "../services/gemini.server";
 import { GROUPS } from "../core/geo";
-import { AppLink, Empty, Icon, Meter, Notice, Panel, PanelLink } from "../ui/common";
+import { AppLink, Badge, Empty, formatDate, Icon, Meter, Notice, Panel, PanelLink } from "../ui/common";
 import { CountUp } from "../ui/motion";
 import { Distribution, TrendChart } from "../ui/charts";
 import { AiSalesPanel } from "../ui/sales";
@@ -21,10 +22,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const ctx = await context(request);
   if (ctx.demo) await seedDemo();
   else await ensureStore(ctx.shop);
-  const [overview, sales, visibility] = await Promise.all([
+  const [overview, sales, visibility, changes] = await Promise.all([
     catalogOverview(ctx.shop),
     aiSalesSummary(ctx.shop),
     visibilitySummary(ctx.shop, visibilityEngine() !== null),
+    db.change.findMany({
+      where: { product: { shop: ctx.shop } },
+      orderBy: { createdAt: "desc" },
+      take: 6,
+      select: { id: true, kind: true, status: true, createdAt: true, product: { select: { title: true } } },
+    }),
   ]);
   return {
     summary: overview.summary,
@@ -34,9 +41,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
     sales,
     ordersConnected: !ctx.missingScopes.includes("read_orders"),
     visibility: { history: visibility.history, latest: visibility.latest && { score: visibility.latest.score } },
+    changes: changes.map((c) => ({ ...c, createdAt: c.createdAt.toISOString() })),
   };
 }
 
+const CHANGE_LABEL: Record<string, string> = {
+  PUBLISHED: "Published",
+  RESTORED: "Previous version restored",
+  FAILED: "Publish failed",
+  CONFLICT: "Stopped: product changed",
+};
 const shortDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
@@ -178,6 +192,35 @@ export default function Performance() {
                 <div className="panel-body">
                   <Distribution values={data.readiness} />
                 </div>
+              </Panel>
+              <Panel
+                id="published"
+                title="Recently published"
+                description="Every change is saved and can be restored."
+                action={data.changes.length > 0 && <PanelLink to="/app/history">History</PanelLink>}
+              >
+                {data.changes.length ? (
+                  <ul className="panel-rows stagger">
+                    {data.changes.map((item) => (
+                      <li key={item.id}>
+                        <span className="activity-dot" aria-hidden="true" />
+                        <div className="row-main">
+                          <strong>{item.product.title}</strong>
+                          <small>
+                            {item.kind === "seo" ? "Search listing" : "Description"} ·{" "}
+                            {CHANGE_LABEL[item.status] ?? item.status.toLowerCase().replace(/_/g, " ")} ·{" "}
+                            {formatDate(item.createdAt)}
+                          </small>
+                        </div>
+                        {!["PUBLISHED", "RESTORED"].includes(item.status) && <Badge tone="warning">Check</Badge>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <Empty icon="history" title="Nothing published yet">
+                    Descriptions and search listings you approve appear here.
+                  </Empty>
+                )}
               </Panel>
             </div>
           </div>

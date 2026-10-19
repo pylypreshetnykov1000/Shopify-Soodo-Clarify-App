@@ -31,9 +31,8 @@ const NAV: { to: string; name: string; icon: IconName; group: "main" | "more"; a
   { to: "/app", name: "Dashboard", icon: "grid", group: "main" },
   { to: "/app/visibility", name: "AI visibility", icon: "chat", group: "main" },
   { to: "/app/fixes", name: "Action plan", icon: "list", group: "main" },
-  { to: "/app/content", name: "Content", icon: "doc", group: "main", also: ["/app/history"] },
-  { to: "/app/performance", name: "Performance", icon: "chart", group: "main" },
-  { to: "/app/products", name: "Products", icon: "box", group: "more" },
+  { to: "/app/products", name: "Products", icon: "box", group: "main" },
+  { to: "/app/performance", name: "Performance", icon: "chart", group: "main", also: ["/app/history"] },
   { to: "/app/settings", name: "Settings", icon: "settings", group: "more" },
   { to: "/app/help", name: "Help", icon: "help", group: "more" },
 ];

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData, useLocation, useSearchParams } from "react-router";
+import db from "../db.server";
 import { context } from "../services/context.server";
 import { ensureStore } from "../services/catalog.server";
 import { catalogOverview, type FixGroup } from "../services/geo.server";
 import { seedDemo } from "../services/demo.server";
 import { GROUPS, type CheckGroup, type Priority } from "../core/geo";
-import { AppLink, Icon, Mark, Notice, PRIORITY_LABEL } from "../ui/common";
+import { AppLink, formatDate, Icon, Mark, Notice, PRIORITY_LABEL } from "../ui/common";
 import { Collapsible } from "../ui/motion";
 import { JobPanels, LiveButton, ScanButton, useLiveChecks, useScan } from "../ui/jobs";
 import { HelpButton } from "../ui/help";
@@ -15,8 +16,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const ctx = await context(request);
   if (ctx.demo) await seedDemo();
   else await ensureStore(ctx.shop);
-  const overview = await catalogOverview(ctx.shop);
+  const [overview, drafts] = await Promise.all([
+    catalogOverview(ctx.shop),
+    db.suggestion.findMany({
+      where: { status: "DRAFT", product: { shop: ctx.shop, deleted: false } },
+      orderBy: { createdAt: "desc" },
+      select: { id: true, kind: true, createdAt: true, product: { select: { id: true, title: true } } },
+    }),
+  ]);
   return {
+    drafts: drafts.map((d) => ({ ...d, createdAt: d.createdAt.toISOString() })),
     store: overview.store,
     fixPlan: overview.fixPlan,
     signals: overview.signals,
@@ -165,6 +174,36 @@ export default function FixPlan() {
           {unchecked} published product page{unchecked === 1 ? " has" : "s have"} not been checked live. Visibility and
           structured data fixes appear after a live check.
         </Notice>
+      )}
+
+      {data.drafts.length > 0 && (
+        <section className="card review-card" aria-labelledby="review">
+          <div className="card-heading">
+            <div>
+              <h2 id="review">Waiting for your review</h2>
+              <p>Drafted by Soodo. Approve the wording and Soodo publishes it; nothing changes until then.</p>
+            </div>
+          </div>
+          <ul className="panel-rows stagger">
+            {data.drafts.map((d) => (
+              <li key={d.id}>
+                <div className="row-main">
+                  <strong>{d.product.title}</strong>
+                  <small>
+                    {d.kind === "seo" ? "Search listing" : "Description"} · drafted {formatDate(d.createdAt)}
+                  </small>
+                </div>
+                <AppLink
+                  to={`/app/products/${d.product.id}${d.kind === "seo" ? "#listing" : "#draft"}`}
+                  className="button compact primary"
+                  label={`Review ${d.kind === "seo" ? "search listing" : "description"} for ${d.product.title}`}
+                >
+                  Review
+                </AppLink>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       {storeIssues.length > 0 && (
