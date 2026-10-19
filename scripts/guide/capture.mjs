@@ -7,7 +7,7 @@ import { chromium } from "@playwright/test";
 
 const base = process.env.GUIDE_URL ?? "http://127.0.0.1:3000";
 const dbFile = process.env.GUIDE_DB;
-const out = new URL("../../public/guide/", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
+const out = new URL("../../public/guide/", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 if (!dbFile) throw new Error("Set GUIDE_DB to the demo's SQLite file.");
 mkdirSync(out, { recursive: true });
 
@@ -116,16 +116,38 @@ await page.getByText("Live page checks complete").waitFor({ timeout: 30000 });
 await settle();
 await page.waitForTimeout(1500);
 
+// AI visibility: run a test (the demo assistant answers from a script).
+await page.goto(base + "/app/visibility");
+await settle();
+await page.getByRole("button", { name: "Run first test" }).click();
+await page.locator(".visibility-summary").waitFor({ timeout: 60000 });
+await settle();
+await page.locator(".question-list summary").nth(1).click();
+await settle();
+await hideToasts(true);
+await annotate([
+  [".summary-score", 1],
+  [".summary-stat", 2, 1],
+  [".visibility-questions", 3],
+  ['section[aria-labelledby="competitors"]', 4],
+  ['section[aria-labelledby="sources"]', 5],
+  [".page-heading .page-actions .button", 6],
+]);
+await shot("22-visibility", ".page-heading", ".visibility-columns");
+await clear();
+await hideToasts(false);
+
 // Simple Overview (default) and AI sales.
 await page.goto(base + "/app");
 await page.locator(".sales-value").first().waitFor();
 await settle();
 await annotate([
-  [".brand-hero.simple .hero-figure", 1, 0],
-  [".brand-hero.simple .hero-figure", 2, 1],
+  [".summary-score", 1],
+  [".summary-card .summary-stat", 2, 0],
   [".next-steps", 3],
-  [".view-switch", 4],
-  [".help-button", 5],
+  [".ai-sales", 4],
+  [".view-switch", 5],
+  [".help-button", 6],
 ]);
 await shot("17-simple-overview", ".page-heading", ".simple-columns");
 await clear();

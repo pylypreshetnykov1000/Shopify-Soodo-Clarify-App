@@ -143,30 +143,3 @@ export function AiSalesPanel({
     </Panel>
   );
 }
-
-/** Hero headline: the AI sales figure, or how to turn it on. */
-export function AiSalesHeadline({ sales, connected }: { sales: AiSales; connected: boolean }) {
-  if (!connected)
-    return (
-      <>
-        <p className="hero-number empty small">—</p>
-        <p className="hero-sub">Approve order access to see sales from ChatGPT and others.</p>
-      </>
-    );
-  if (!sales.syncedAt)
-    return (
-      <>
-        <p className="hero-number empty small">…</p>
-        <p className="hero-sub">Reading your recent orders.</p>
-      </>
-    );
-  return (
-    <>
-      <p className="hero-number small">{money(sales.revenue, sales.currency)}</p>
-      <p className="hero-sub">
-        {sales.orders} order{sales.orders === 1 ? "" : "s"} in the last 30 days
-        {sales.byAssistant[0] ? `, most from ${sales.byAssistant[0].name}` : ""}
-      </p>
-    </>
-  );
-}

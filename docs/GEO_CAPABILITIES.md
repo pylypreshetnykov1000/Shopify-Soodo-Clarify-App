@@ -60,10 +60,19 @@ Readiness is not a ranking and a full score does not guarantee indexing, recomme
 - **Search listing** (`app/core/listing.ts`): suggestion from product data only; title ≤ 70 characters, description ≤ 320 (about 160 shown). Published through `productUpdate(seo)` using the same draft, lock, journal, verification and restore pipeline as descriptions (`kind = "seo"`).
 - **Buyer Q&A**: optional section in description drafts; each question answered only with a verified fact.
 
+## AI visibility test
+
+- `app/core/visibility.ts` builds a catalog brief (active product types, counts, price ranges, example titles), parses answers and detects the store. `app/services/gemini.server.ts` holds the Gemini engine and the scripted demo engine; `app/services/visibility.server.ts` runs tests.
+- Gemini writes `QUESTIONS_PER_TEST` (12) shopper questions from the brief, falling back to built-in templates. Each question is asked with the `google_search` tool and a system instruction to answer as a shopping assistant and end with a `BRANDS:` line.
+- **Recommended:** the answer names the store, a product title of two or more words, or the store's domain. **Cited:** only the store's site appears among the sources (search grounding titles and links in the answer). The score is (recommended + cited) / answered.
+- Three questions per request, in parallel, under a 150-second lease. A batch in which every question fails (bad key, usage limit) stops the test and shows the reason; a single failure is recorded and skipped.
+- Sent to Google: product types, example product titles and price ranges. No customer or order data. Answers are stored per test for the merchant to read.
+- Answers vary between runs; the page says to compare weekly tests rather than single answers. Other assistants (ChatGPT, Claude, Perplexity) can be added as further engines.
+
 ## Readiness history
 
 One reading per store per UTC day (readiness, fully ready products, active products, open fixes) is saved after a completed scan, a completed live-check batch, and each published or restored description. Later readings on the same day replace earlier ones. The Overview trend shows the last 90 days and ends at the current figure; nothing is backfilled for days before the first reading. History is deleted with the store on uninstall or shop redaction. The demo seeds a few weeks of sample readings.
 
 ## Deployment
 
-Run the PostgreSQL migrations `20261016120000_geo_signals`, `20261017090000_readiness_snapshots` and `20261019090000_ai_orders_and_kinds` (applied automatically by `npm run docker-start`), deploy the app configuration so merchants are asked for the new read scopes, then rescan stores to collect category, variant and policy data. Live Shopify installation, real storefront responses and throttling under load still need testing on a development store.
+Run the PostgreSQL migrations `20261016120000_geo_signals`, `20261017090000_readiness_snapshots`, `20261019090000_ai_orders_and_kinds` and `20261020090000_visibility_tests` (applied automatically by `npm run docker-start`), deploy the app configuration so merchants are asked for the new read scopes, then rescan stores to collect category, variant and policy data. Live Shopify installation, real storefront responses and throttling under load still need testing on a development store.

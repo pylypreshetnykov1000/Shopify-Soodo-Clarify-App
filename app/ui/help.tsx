@@ -24,6 +24,7 @@ import { AppLink, Icon } from "./common";
 export function topicForPath(pathname: string): GuideTopic {
   if (/^\/app\/products\/[^/]+/.test(pathname)) return "product";
   if (pathname.startsWith("/app/products")) return "products";
+  if (pathname.startsWith("/app/visibility")) return "visibility";
   if (pathname.startsWith("/app/fixes")) return "fixes";
   if (pathname.startsWith("/app/history")) return "history";
   if (pathname.startsWith("/app/settings")) return "settings";

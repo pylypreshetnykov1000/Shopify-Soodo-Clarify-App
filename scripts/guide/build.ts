@@ -6,7 +6,7 @@ import { chromium } from "@playwright/test";
 import { CHAPTERS, FAQ, GLOSSARY, WORKFLOW, type GuideChapter } from "../../app/core/guide";
 
 const root = new URL("../../", import.meta.url);
-const path = (relative: string) => new URL(relative, root).pathname.replace(/^\/([A-Z]:)/, "$1");
+const path = (relative: string) => new URL(relative, root).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 const css = readFileSync(path("scripts/guide/guide.css"), "utf8");
 const escape = (text: string) =>
   text.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);

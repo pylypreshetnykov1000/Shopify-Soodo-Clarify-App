@@ -235,3 +235,31 @@ export function demoOrders(now = new Date()) {
   );
   return orders.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
+
+/**
+ * A scripted assistant for the demo store: recommends Trail Supply for packs,
+ * cites it for jackets, and prefers other brands for tents and fleece.
+ */
+export function demoAnswer(prompt: string) {
+  const q = prompt.toLowerCase();
+  const variant = [...q].reduce((sum, c) => sum + c.charCodeAt(0), 0) % 3;
+  if (/pack/.test(q))
+    return {
+      raw: `For most day hikes, the **Trail 28 Backpack** from Trail Supply (${DEMO_ORIGIN}/products/trail-28-backpack) is a strong pick: 28 litres, a ventilated back panel and a rain cover. The **Osprey Talon 26** is lighter, and the **REI Co-op Flash 22** costs less.\n\nSee reviews at https://www.outdoorgearlab.com/topics/camping-and-hiking/best-daypack.\n\nBRANDS: Trail Supply; Osprey; REI Co-op`,
+      citedHosts: ["outdoorgearlab.com", "rei.com"],
+    };
+  if (/jacket|shell|rain/.test(q))
+    return {
+      raw: `The **Patagonia Torrentshell 3L** and the **Arc'teryx Beta** are the usual recommendations. Look for a waterproof rating of 20,000 mm or more and pit zips for ventilation.\n\nBRANDS: Patagonia; Arc'teryx${variant === 0 ? "; Marmot" : ""}`,
+      citedHosts: ["trail-supply.example", "switchbacktravel.com", "rei.com"],
+    };
+  if (/tent/.test(q))
+    return {
+      raw: `For two people, the **Big Agnes Copper Spur HV UL2** is the benchmark. The **REI Co-op Half Dome SL 2+** is roomier for less money, and the **MSR Hubba Hubba** is the most durable.\n\nBRANDS: Big Agnes; REI Co-op; MSR`,
+      citedHosts: ["outdoorgearlab.com", "reddit.com", "rei.com"],
+    };
+  return {
+    raw: `The **Patagonia R1** is the classic choice. The **Arc'teryx Kyanite** is warmer and **Columbia Steens Mountain** is the budget pick.\n\nBRANDS: Patagonia; Arc'teryx; Columbia`,
+    citedHosts: ["switchbacktravel.com", variant === 1 ? "reddit.com" : "outdoorgearlab.com"],
+  };
+}

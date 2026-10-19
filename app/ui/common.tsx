@@ -319,6 +319,7 @@ const ICONS = {
     </>
   ),
   external: <path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6" />,
+  chat: <path d="M4.5 5h15v10.5h-8.5L6.5 19v-3.5h-2zM8.5 9.5h7M8.5 12h4.5" />,
   chevron: <path d="m9 6 6 6-6 6" />,
   pause: <path d="M9 6v12M15 6v12" />,
   help: (

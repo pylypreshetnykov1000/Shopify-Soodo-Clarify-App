@@ -54,6 +54,7 @@ model Store {
   products    CatalogProduct[]
   snapshots   ReadinessSnapshot[]
   aiOrders    AiOrder[]
+  visibilityTests VisibilityTest[]
 }
 
 /// An order whose visit came from an AI assistant. Holds no customer data.
@@ -139,4 +140,44 @@ model Change {
   product      CatalogProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
   suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
   @@index([productId, status])
+}
+
+/// One AI visibility test: buyer questions asked to an AI assistant.
+model VisibilityTest {
+  id         String   @id @default(cuid())
+  shop       String
+  assistant  String
+  model      String
+  /// RUNNING, DONE or FAILED.
+  status     String   @default("RUNNING")
+  createdAt  DateTime @default(now())
+  finishedAt DateTime?
+  leaseUntil DateTime?
+  total      Int
+  /// Share of questions where the store was recommended or cited, 0-100.
+  score      Int?
+  error      String?
+  store      Store    @relation(fields: [shop], references: [shop], onDelete: Cascade)
+  answers    VisibilityAnswer[]
+  @@index([shop, createdAt])
+}
+
+/// One buyer question in a test and what the assistant answered.
+model VisibilityAnswer {
+  id         String   @id @default(cuid())
+  testId     String
+  position   Int
+  prompt     String
+  topic      String
+  /// PENDING, DONE or FAILED.
+  status     String   @default("PENDING")
+  /// recommended, cited or absent.
+  appearance String?
+  products   String   @default("[]")
+  brands     String   @default("[]")
+  sources    String   @default("[]")
+  answer     String?
+  error      String?
+  test       VisibilityTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+  @@index([testId, status])
 }

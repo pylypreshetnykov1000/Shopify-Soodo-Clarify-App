@@ -3,6 +3,7 @@ import { useFetcher } from "react-router";
 import type { action as scanAction } from "../routes/app.scan";
 import type { action as liveAction } from "../routes/app.live";
 import type { action as ordersAction } from "../routes/app.orders";
+import type { action as visibilityAction } from "../routes/app.visibility";
 import { Icon, Notice, Spinner, useAppHref } from "./common";
 
 type Step = { ok: boolean; done: boolean; message: string };
@@ -60,6 +61,7 @@ function useBatchJob<D extends Step>(path: string, next: (d: D) => Record<string
 const continueScan = () => ({ restart: "false" });
 const continueOrders = () => ({});
 const continueLive = () => ({});
+const continueVisibility = () => ({ intent: "continue" });
 
 export function useScan(store: { syncStarted: string | null; scanTotal: number | null }) {
   const job = useBatchJob<Awaited<ReturnType<typeof scanAction>>>("/app/scan", continueScan);
@@ -78,6 +80,12 @@ export function useLiveChecks() {
 export function useOrdersSync() {
   const job = useBatchJob<Awaited<ReturnType<typeof ordersAction>>>("/app/orders", continueOrders);
   return { ...job, start: () => job.start({}) };
+}
+
+/** Asks the AI assistant a few buyer questions per request until the test is done. */
+export function useVisibilityTest() {
+  const job = useBatchJob<Awaited<ReturnType<typeof visibilityAction>>>("/app/visibility", continueVisibility);
+  return { ...job, start: () => job.start({ intent: "start" }) };
 }
 
 export function ScanButton({

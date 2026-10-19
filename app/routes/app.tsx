@@ -28,6 +28,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 const NAV: { to: string; name: string; icon: IconName }[] = [
   { to: "/app", name: "Overview", icon: "grid" },
+  { to: "/app/visibility", name: "AI visibility", icon: "chat" },
   { to: "/app/products", name: "Products", icon: "box" },
   { to: "/app/fixes", name: "Fix plan", icon: "list" },
   { to: "/app/history", name: "Change history", icon: "history" },

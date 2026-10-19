@@ -19,6 +19,7 @@ On Windows, stop the dev server before rerunning `npm run setup`: a running Pris
 ## What works
 
 - **Simple Overview (default):** readiness, sales from AI assistants, and "Your next steps" in plain language. A Simple/Detailed switch (saved per store) shows the full dashboard: area tiles, readiness trend and distribution, top fixes, store-wide signals and recent changes. New stores get a one-click **Get started** that imports products, then checks live pages.
+- **AI visibility:** writes 12 buyer questions from the catalog (never naming the store), asks Gemini each one with Google Search, and shows a 0–100 score (questions where the store or a product was named, or its site cited), every question with the full answer, the brands recommended instead and the websites Gemini relied on. Runs in resumable batches of three questions. Needs `GEMINI_API_KEY`; the demo and tests use a scripted assistant.
 - **Sales from AI assistants:** orders whose first or last visit came from ChatGPT, Perplexity, Gemini, Copilot, Claude, Meta AI, Grok or DeepSeek (referrer or UTM source), with revenue, share of sales, revenue by assistant and recent orders. Only order number, amount, assistant and landing page are stored; customer redaction requests delete them; rows older than 90 days are removed.
 - **Search listing:** a suggested SEO title and meta description built from the product's title, brand, category, description and verified facts, editable with a Google-style preview, then draft → approve → publish → verify → restore like descriptions.
 - **Buyer Q&A:** optionally added to description drafts, answering each buyer question only with a verified fact.
@@ -58,6 +59,8 @@ The app uses Shopify's official React Router starter and GraphQL Admin API `2026
 The Shopify CLI supplies development credentials and tunnel URLs. For hosted environments, supply the variables in `.env.example` and update app/redirect URLs. Do not use placeholder URLs for deployment. Never enable demo mode on a host.
 
 ## Render staging deployment
+
+Set `GEMINI_API_KEY` (a Google AI Studio key) in the Render dashboard to turn on AI visibility tests; `GEMINI_MODEL` defaults to `gemini-flash-latest`. Locally, put the key in `.env`, which git ignores. Never commit the key.
 
 The repository includes a [Render Blueprint](render.yaml), a separate PostgreSQL schema and migration history, and a database health endpoint. Follow [the deployment guide](docs/RENDER_DEPLOYMENT.md). The Blueprint proposes paid web/database services; review Render's costs before creating them. Local demo/tests continue to use SQLite. Real PostgreSQL connectivity and the Linux container build still need validation on the hosting environment.
 

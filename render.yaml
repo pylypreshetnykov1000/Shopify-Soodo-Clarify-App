@@ -24,6 +24,11 @@ services:
         sync: false
       - key: SHOPIFY_API_SECRET
         sync: false
+      # AI visibility tests. Set the key in the Render dashboard.
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
 databases:
   - name: soodo-clarity-db
     databaseName: soodo_clarity

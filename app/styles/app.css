@@ -3994,19 +3994,128 @@ th:last-child {
 .view-switch button {
   padding: 5px 12px;
 }
-.brand-hero.simple {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-}
-.brand-hero.simple .hero-figure + .hero-figure {
-  border-right: 0;
-}
-.brand-hero.simple .hero-figure:first-of-type {
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
-}
-.brand-hero.simple:has(+ .simple-columns) {
-  border-radius: var(--radius-lg);
+.summary-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) repeat(3, minmax(0, 1fr));
   margin-bottom: var(--gap);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  animation: panel-in 360ms var(--ease) both;
+}
+.summary-card > * {
+  min-width: 0;
+  padding: 22px 24px;
+}
+.summary-card > * + * {
+  border-left: 1px solid var(--line);
+}
+.summary-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.summary-head h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.summary-number {
+  margin-top: 10px;
+  font-size: 44px;
+  line-height: 1;
+  font-weight: 650;
+  letter-spacing: -1.4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.summary-number small,
+.summary-value small {
+  margin-left: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.summary-meter {
+  position: relative;
+  height: 8px;
+  margin-top: 16px;
+  max-width: 460px;
+  background: var(--surface-3);
+  border-radius: 1px;
+}
+.summary-meter > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 1px;
+  background: var(--accent);
+  transform-origin: left;
+  animation: grow 700ms var(--ease) both;
+}
+.summary-meter > span.high {
+  background: var(--high);
+}
+.summary-meter > span.medium {
+  background: var(--medium);
+}
+.summary-meter > i {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line-strong);
+}
+.summary-text {
+  margin-top: 12px;
+  max-width: 520px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.summary-text .delta.up {
+  color: var(--pass);
+}
+.summary-text .delta.down {
+  color: var(--high);
+}
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+}
+.summary-stat .stat-label {
+  font-size: 13px;
+  font-weight: 560;
+  color: var(--ink-2);
+}
+.summary-value {
+  display: block;
+  margin-top: 12px;
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 650;
+  letter-spacing: -0.8px;
+  font-variant-numeric: tabular-nums;
+}
+.summary-stat .stat-note {
+  margin-top: 10px;
+}
+.summary-value.empty {
+  font-size: 22px;
+  line-height: 32px;
+  color: var(--muted);
+  letter-spacing: -0.3px;
+}
+.visibility-summary {
+  grid-template-columns: minmax(0, 1.7fr) repeat(2, minmax(0, 1fr));
+}
+.summary-card > .summary-steps {
+  grid-column: 1 / -1;
+  padding: 14px 24px 16px;
+  border-left: 0;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
 }
 .hero-number.small {
   font-size: 44px;
@@ -4185,12 +4294,37 @@ th:last-child {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+@media (max-width: 1100px) {
+  /* The score takes the first row; the figures share the second. */
+  .summary-card {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .summary-card.visibility-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .summary-card > .summary-score {
+    grid-column: 1 / -1;
+  }
+  .summary-card > .summary-stat {
+    border-top: 1px solid var(--line);
+  }
+  .summary-card > .summary-stat:nth-child(2) {
+    border-left: 0;
+  }
+}
 @media (max-width: 720px) {
-  .brand-hero.simple {
+  .summary-card,
+  .summary-card.visibility-summary {
     grid-template-columns: minmax(0, 1fr);
   }
-  .brand-hero.simple .hero-figure:first-of-type {
-    border-right: 0;
+  .summary-card > * {
+    padding: 18px 16px;
+  }
+  .summary-card > .summary-stat {
+    border-left: 0;
+  }
+  .summary-card > .summary-steps {
+    padding: 12px 16px 14px;
   }
   .hero-number.small {
     font-size: 38px;
@@ -4338,5 +4472,193 @@ th:last-child {
   ::view-transition-old(page),
   ::view-transition-new(page) {
     animation: none !important;
+  }
+}
+
+/* ---------------------------------------------------------- AI visibility
+   A test of buyer questions: the score, each question, then who and what
+   the assistant relied on instead. */
+
+.visibility-intro-body {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+  max-width: 680px;
+  padding: 28px 28px 30px;
+}
+.visibility-intro-body h2 {
+  font-size: 20px;
+  line-height: 1.3;
+  letter-spacing: -0.3px;
+}
+.visibility-intro-body p {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.intro-points {
+  display: grid;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.intro-points li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.intro-points li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  background: var(--accent);
+}
+.brand-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 24px;
+  line-height: 32px;
+  margin-top: 12px;
+}
+.visibility-columns {
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+}
+.question-list > li {
+  border-top: 1px solid var(--line);
+}
+.question-list summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 16px 10px 20px;
+  cursor: pointer;
+  list-style: none;
+  transition: background var(--fast) var(--ease);
+}
+.question-list summary::-webkit-details-marker {
+  display: none;
+}
+.question-list summary:hover {
+  background: var(--surface-2);
+}
+.question-list summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+.question-list .row-main strong {
+  font-size: 13.5px;
+  font-weight: 580;
+}
+.question-list .row-main small {
+  margin-top: 2px;
+}
+.question-chevron {
+  display: grid;
+  place-items: center;
+  color: var(--faint);
+  transition: transform var(--base) var(--ease);
+}
+.question-list details[open] .question-chevron {
+  transform: rotate(90deg);
+}
+.question-answer {
+  padding: 4px 20px 16px;
+  animation: fade-in var(--base) var(--ease);
+}
+.answer-text {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--surface-2);
+  border-left: 2px solid var(--line-strong);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.answer-text strong {
+  color: var(--ink);
+  font-weight: 620;
+}
+.question-sources {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.rank-bars {
+  display: grid;
+  gap: 12px;
+  padding: 14px 20px 18px;
+  border-top: 1px solid var(--line);
+}
+.rank-bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 132px) minmax(0, 1fr) 52px;
+  align-items: center;
+  gap: 12px;
+  font-size: 12.5px;
+}
+.rank-name {
+  display: grid;
+  min-width: 0;
+}
+.rank-name strong {
+  font-weight: 580;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rank-name small {
+  font-size: 11px;
+  color: var(--accent);
+}
+.rank-track {
+  height: 8px;
+  background: var(--surface-3);
+  border-radius: 1px;
+}
+.rank-track > span {
+  display: block;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--ink-2);
+  transform-origin: left;
+  animation: grow 700ms var(--ease) both;
+}
+.rank-count {
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.improve-list .button {
+  flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .visibility-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 720px) {
+  .visibility-intro-body {
+    padding: 22px 16px;
+  }
+  .question-list summary {
+    padding: 10px 12px 10px 14px;
+  }
+  .question-answer {
+    padding: 4px 14px 14px;
+  }
+  .rank-bars {
+    padding: 12px 14px 16px;
+  }
+  .rank-bars li {
+    grid-template-columns: minmax(0, 104px) minmax(0, 1fr) 46px;
+    gap: 8px;
   }
 }

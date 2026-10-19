@@ -9,6 +9,7 @@ import { catalogOverview } from "../services/geo.server";
 import { seedDemo } from "../services/demo.server";
 import { readinessTrend } from "../services/snapshots.server";
 import { aiSalesSummary } from "../services/orders.server";
+import { visibilityHeadline } from "../services/visibility.server";
 import { planActions } from "../core/actions";
 import { GROUPS } from "../core/geo";
 import {
@@ -36,14 +37,14 @@ import {
   useOrdersSync,
   useScan,
 } from "../ui/jobs";
-import { AiSalesHeadline, AiSalesPanel } from "../ui/sales";
+import { AiSalesPanel } from "../ui/sales";
 import { HelpButton } from "../ui/help";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const ctx = await context(request);
   if (ctx.demo) await seedDemo();
   else await ensureStore(ctx.shop);
-  const [overview, changes, trend, sales, storeRow] = await Promise.all([
+  const [overview, changes, trend, sales, storeRow, visibility] = await Promise.all([
     catalogOverview(ctx.shop),
     db.change.findMany({
       where: { product: { shop: ctx.shop } },
@@ -63,6 +64,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
       where: { shop: ctx.shop },
       select: { detailed: true },
     }),
+    visibilityHeadline(ctx.shop),
   ]);
   // End the line at today's live figure so the chart always agrees with the
   // hero, even before today's reading has been saved.
@@ -90,6 +92,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     ...overview,
     actions,
     sales,
+    visibility,
     detailed: storeRow?.detailed ?? false,
     ordersConnected: !ctx.missingScopes.includes("read_orders"),
     trend: series,
@@ -249,6 +252,27 @@ export default function Overview() {
             : "todo",
     },
   ];
+  const band =
+    summary.readiness >= 80
+      ? {
+          label: "Good",
+          tone: "pass",
+          badge: "success",
+          text: "Your products give AI assistants and search engines what they need to recommend them.",
+        }
+      : summary.readiness >= 50
+        ? {
+            label: "Getting there",
+            tone: "medium",
+            badge: "warning",
+            text: "AI assistants can read most of your product details. A few fixes will help them recommend you.",
+          }
+        : {
+            label: "Needs work",
+            tone: "high",
+            badge: "critical",
+            text: "AI assistants and search engines are missing key details on most of your products.",
+          };
   const healthy = data.signals.filter((s) => s.status === "pass");
   const signalIssues = data.signals.filter((s) => s.status !== "pass");
   const activeReadiness = data.products
@@ -370,53 +394,98 @@ export default function Overview() {
 
       {hasProducts && !detailed && (
         <>
-          <section className="brand-hero simple" aria-label="Your results">
-            <svg className="hero-mark" viewBox="0 0 200 200" aria-hidden="true">
-              <circle
-                cx="92"
-                cy="108"
-                r="58"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="18"
-              />
-              <circle cx="152" cy="48" r="18" fill="currentColor" />
-            </svg>
-            <div className="hero-figure">
-              <span className="hero-eyebrow">How ready your products are</span>
-              <p className="hero-number">
+          <section className="summary-card" aria-labelledby="score-title">
+            <div className="summary-score">
+              <div className="summary-head">
+                <h2 id="score-title">AI readiness score</h2>
+                <span className={`badge ${band.badge}`}>{band.label}</span>
+              </div>
+              <p className="summary-number">
                 <CountUp value={summary.readiness} />
-                <span>%</span>
+                <small>/100</small>
               </p>
-              <p className="hero-sub">
-                {change ? (
+              <div
+                className="summary-meter"
+                role="img"
+                aria-label={`Score ${summary.readiness} out of 100. 80 or more is good.`}
+              >
+                <span
+                  className={band.tone}
+                  style={{ width: `${summary.readiness}%` }}
+                />
+                <i style={{ left: "80%" }} aria-hidden="true" />
+              </div>
+              <p className="summary-text">
+                {band.text}
+                {change && change.points !== 0 && (
                   <>
+                    {" "}
                     <span
-                      className={`delta ${change.points >= 0 ? "up" : "down"}`}
+                      className={`delta ${change.points > 0 ? "up" : "down"}`}
                     >
-                      {change.points >= 0 ? "▲" : "▼"} {Math.abs(change.points)}{" "}
-                      pts
+                      {change.points > 0 ? "Up" : "Down"}{" "}
+                      {Math.abs(change.points)} points
                     </span>{" "}
-                    since {shortDay(change.since)}
+                    since {shortDay(change.since)}.
                   </>
-                ) : (
-                  `${summary.ready} of ${summary.active} products fully ready`
                 )}
               </p>
             </div>
-            <div className="hero-figure">
-              <span className="hero-eyebrow">Sales from AI assistants</span>
-              <AiSalesHeadline
-                sales={data.sales}
-                connected={data.ordersConnected}
-              />
+            <div className="summary-stat">
+              <span className="stat-label">AI visibility</span>
+              {data.visibility ? (
+                <>
+                  <strong className="summary-value">
+                    {data.visibility.score}
+                    <small>/100</small>
+                  </strong>
+                  <span className="stat-note">
+                    <AppLink to="/app/visibility" className="text-link">
+                      Named or cited in {data.visibility.appeared} of{" "}
+                      {data.visibility.answered} answers
+                    </AppLink>
+                  </span>
+                </>
+              ) : (
+                <>
+                  <strong className="summary-value empty">Not tested</strong>
+                  <span className="stat-note">
+                    <AppLink to="/app/visibility" className="text-link">
+                      See what Gemini recommends
+                    </AppLink>
+                  </span>
+                </>
+              )}
             </div>
+            <div className="summary-stat">
+              <span className="stat-label">Products fully ready</span>
+              <strong className="summary-value">
+                {summary.ready}
+                <small> of {summary.active}</small>
+              </strong>
+              <span className="stat-note">
+                Active products with nothing left to fix
+              </span>
+            </div>
+            <div className="summary-stat">
+              <span className="stat-label">Things to fix</span>
+              <strong className="summary-value">{data.fixPlan.length}</strong>
+              <span className="stat-note">
+                {data.fixPlan.length ? (
+                  <AppLink to="/app/fixes" className="text-link">
+                    See the full list
+                  </AppLink>
+                ) : (
+                  "All clear"
+                )}
+              </span>
+            </div>
+            {!setupDone && (
+              <div className="summary-steps">
+                <Steps steps={steps} label="Setup progress" />
+              </div>
+            )}
           </section>
-          {!setupDone && (
-            <div className="steps-card">
-              <Steps steps={steps} label="Setup progress" />
-            </div>
-          )}
           <div
             className="overview-columns simple-columns"
           >

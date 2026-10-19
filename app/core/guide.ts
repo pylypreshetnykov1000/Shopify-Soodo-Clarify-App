@@ -24,6 +24,7 @@ export type GuideChapter = {
 export type GuideTopic =
   | "overview"
   | "sales"
+  | "visibility"
   | "listing"
   | "scan"
   | "products"
@@ -58,14 +59,15 @@ export const CHAPTERS: GuideChapter[] = [
     plates: [
       {
         image: img("17-simple-overview"),
-        alt: "Simple Overview: readiness, sales from AI assistants, setup progress and your next steps",
+        alt: "Simple Overview: AI readiness score, AI visibility, products ready, things to fix, next steps and sales from AI assistants",
         caption: "Overview, simple view (the default)",
         width: 1584,
-        height: 1421,
+        height: 1496,
         legend: [
-          { title: "How ready your products are", text: "One score from 0 to 100, and how much it changed in the last 30 days." },
-          { title: "Sales from AI assistants", text: "Revenue from orders that started in ChatGPT, Perplexity, Gemini and others in the last 30 days." },
+          { title: "AI readiness score", text: "One score from 0 to 100 with a plain label: Needs work below 50, Getting there from 50, Good from 80 (the mark on the bar)." },
+          { title: "AI visibility", text: "How often Gemini named or cited your store in the last visibility test. Next to it: how many active products have nothing left to fix, and how many fixes are open." },
           { title: "Your next steps", text: "The three most useful things to do now, in plain words. Start at the top; each button takes you there or starts the job." },
+          { title: "Sales from AI assistants", text: "Revenue from orders that started in ChatGPT, Perplexity, Gemini and others in the last 30 days." },
           { title: "Simple or Detailed", text: "Detailed adds the charts, area scores and full lists. Soodo remembers your choice." },
           { title: "Help", text: "Opens this guide for the screen you’re on. You can also press ?." },
         ],
@@ -160,8 +162,44 @@ export const CHAPTERS: GuideChapter[] = [
     ],
   },
   {
-    id: "scan",
+    id: "visibility",
     number: "03",
+    kicker: "Results",
+    title: "AI visibility",
+    why: "Shoppers increasingly ask AI assistants what to buy. This test shows whether Gemini recommends your store, who it recommends instead, and which websites it trusts.",
+    plates: [
+      {
+        image: img("22-visibility"),
+        alt: "AI visibility: score, questions where the store was recommended, competitors and cited websites",
+        caption: "AI visibility, after a test",
+        width: 1584,
+        height: 2136,
+        legend: [
+          { title: "AI visibility score", text: "The share of shopper questions where Gemini recommended your store or a product by name, or cited your website. 50 or more is strong; below 20 is low." },
+          { title: "Recommended most instead", text: "The brand or store Gemini suggested most often in place of you." },
+          { title: "Shopper questions", text: "Each question Soodo asked, whether you appeared, and who was suggested. Open one to read Gemini's full answer and the sites it used." },
+          { title: "Recommended instead of you", text: "Brands and stores named across all answers. “You sell this brand” marks brands in your own catalog." },
+          { title: "Websites Gemini relies on", text: "Review sites, forums and stores it read. Appearing on these sites makes you more likely to be recommended." },
+          { title: "Run test again", text: "Asks a fresh set of questions. Run it weekly and compare the score over time." },
+        ],
+      },
+    ],
+    notes: [
+      {
+        kind: "tip",
+        title: "Why answers change",
+        text: "AI assistants don't give the same answer twice, and they search the web as they answer. Read the score as a trend across weekly tests, not as an exact figure for one day.",
+      },
+      {
+        kind: "tip",
+        title: "What Soodo sends to Gemini",
+        text: "Your product types, example product names and price ranges, to write the questions. The questions themselves never name your store. No customer or order data is sent.",
+      },
+    ],
+  },
+  {
+    id: "scan",
+    number: "04",
     kicker: "Steps 1 and 2",
     title: "Scan and live checks",
     why: "Both jobs run in small batches with a progress bar, so large catalogs never time out. You can pause and continue later; finished work is kept.",
@@ -201,7 +239,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "products",
-    number: "04",
+    number: "05",
     kicker: "Catalog",
     title: "Products",
     why: "Every product with its score, its next fix and its live page status. Click anywhere on a row to open the product.",
@@ -229,7 +267,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "product",
-    number: "05",
+    number: "06",
     kicker: "Product page",
     title: "A product’s checks",
     why: "Each product has three tabs: Checks, Specifications and Live page. Checks lists what to fix, grouped by area, with the most important one already open.",
@@ -265,7 +303,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "specs",
-    number: "06",
+    number: "07",
     kicker: "Step 3 · in Soodo",
     title: "Adding specifications",
     why: "Assistants answer buyers’ questions from what is written on the page. Soodo finds the key facts for each type of product and helps you write the missing ones into the description.",
@@ -304,7 +342,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "listing",
-    number: "07",
+    number: "08",
     kicker: "Product page",
     title: "Search listing",
     why: "The title and short description people see on Google, and that AI answers often quote. Soodo suggests one from your product data; you edit and approve it.",
@@ -339,7 +377,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "publish",
-    number: "08",
+    number: "09",
     kicker: "Step 4",
     title: "Review and publish",
     why: "You always see the exact wording before anything is published. Soodo keeps your existing text and adds one clear specifications list at the end.",
@@ -373,7 +411,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "live",
-    number: "09",
+    number: "10",
     kicker: "Product page",
     title: "Live page",
     why: "What search engines and AI assistants actually see when they open the product page.",
@@ -408,7 +446,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "fixes",
-    number: "10",
+    number: "11",
     kicker: "Step 3 · across products",
     title: "Fix plan",
     why: "Every open fix across your active products, ranked by impact. Fix the same issue on several products in one pass.",
@@ -435,7 +473,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "history",
-    number: "11",
+    number: "12",
     kicker: "Undo",
     title: "Change history",
     why: "Every description Soodo published, with the version it replaced.",
@@ -467,7 +505,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "settings",
-    number: "12",
+    number: "13",
     kicker: "Setup",
     title: "Settings and permissions",
     why: "Choose which specification checklist applies, and see which Shopify permissions Soodo has.",
@@ -598,8 +636,9 @@ export const GLOSSARY: [term: string, meaning: string][] = [
 
 /** Chapters that usually come next after reading one. */
 export const RELATED: Record<GuideTopic, GuideTopic[]> = {
-  overview: ["sales", "scan", "fixes"],
-  sales: ["overview", "listing", "fixes"],
+  overview: ["visibility", "sales", "fixes"],
+  sales: ["overview", "visibility", "fixes"],
+  visibility: ["overview", "fixes", "product"],
   listing: ["publish", "product", "history"],
   scan: ["overview", "live", "settings"],
   products: ["product", "fixes"],

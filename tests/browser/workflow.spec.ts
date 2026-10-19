@@ -513,7 +513,7 @@ test("help opens the right chapter for each screen and links to the full guide",
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByRole("heading", { name: "Help and guide" })).toBeVisible();
   // Introduction, twelve chapters, troubleshooting and glossary.
-  await expect(page.locator(".guide-section")).toHaveCount(15);
+  await expect(page.locator(".guide-section")).toHaveCount(16);
   await expect(page.getByRole("link", { name: "Help", exact: true })).toHaveAttribute("aria-current", "page");
 });
 
@@ -529,11 +529,12 @@ test("pressing ? opens help for the current screen, but not while typing", async
   await expect(page.getByRole("dialog")).toBeHidden();
 });
 
-test("the simple overview shows two outcomes and three plain next steps", async ({ page }) => {
+test("the simple overview shows a plain score and three plain next steps", async ({ page }) => {
   await overviewView(page, "Simple");
-  const hero = page.getByRole("region", { name: "Your results" });
-  await expect(hero.getByText("How ready your products are")).toBeVisible();
-  await expect(hero.getByText("Sales from AI assistants")).toBeVisible();
+  const summary = page.getByRole("region", { name: "AI readiness score" });
+  await expect(summary.locator(".badge")).toHaveText(/Needs work|Getting there|Good/);
+  await expect(summary.getByText("Products fully ready")).toBeVisible();
+  await expect(summary.getByText("Things to fix")).toBeVisible();
   const steps = page.locator(".next-list > li");
   await expect(steps).toHaveCount(3);
   // The first step is the primary action and is written in plain words.
@@ -598,4 +599,35 @@ test("a new store gets started with one click: import, then live checks", async 
   await expect(page.locator(".notice.success").filter({ hasText: "Scan complete" })).toBeVisible();
   await expect(page.locator(".notice.success").filter({ hasText: "Live page checks complete" })).toBeVisible({ timeout: 20000 });
   await expect(page.getByRole("heading", { name: "Your next steps" })).toBeVisible();
+});
+
+test("an AI visibility test shows where Gemini recommends the store and who it suggests instead", async ({ page }) => {
+  await page.goto("/app");
+  await page.getByRole("link", { name: "AI visibility", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "See what Gemini tells your shoppers" })).toBeVisible();
+  await page.getByRole("button", { name: "Run first test" }).click();
+  const summary = page.getByRole("region", { name: "AI visibility score" });
+  await expect(summary).toBeVisible({ timeout: 20000 });
+  await expect(page.locator(".notice.success, .toast")).toContainText("Test finished");
+  // Twelve questions; the demo assistant names the store for packs only.
+  const questions = page.getByRole("region", { name: "Shopper questions" }).locator(".question-list > li");
+  await expect(questions).toHaveCount(12);
+  await expect(questions.filter({ hasText: "Recommended" }).first()).toContainText(/pack/i);
+  await expect(questions.filter({ hasText: "Your site cited" }).first()).toContainText(/jacket/i);
+  const competitors = page.getByRole("list", { name: "Brands recommended" });
+  await expect(competitors.locator("li").first()).toContainText("8 of 12");
+  await expect(competitors).toContainText("Patagonia");
+  await expect(page.getByRole("list", { name: "Websites cited" })).toContainText("trail-supply.example");
+  // A question opens to the full answer.
+  await questions.filter({ hasText: /pack/i }).first().locator("summary").click();
+  await expect(questions.filter({ hasText: /pack/i }).first().locator(".answer-text")).toContainText("Trail 28 Backpack");
+  // The Overview shows the same score and links back.
+  await overviewView(page, "Simple");
+  const overview = page.getByRole("region", { name: "AI readiness score" });
+  await expect(overview.getByRole("link", { name: /Named or cited in \d+ of 12 answers/ })).toBeVisible();
+  expect(await fits(page)).toBe(true);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/app/visibility");
+  await expect(page.getByRole("region", { name: "AI visibility score" })).toBeVisible();
+  expect(await fits(page)).toBe(true);
 });
