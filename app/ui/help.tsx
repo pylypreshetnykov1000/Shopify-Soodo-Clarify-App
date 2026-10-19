@@ -27,6 +27,8 @@ export function topicForPath(pathname: string): GuideTopic {
   if (pathname.startsWith("/app/visibility")) return "visibility";
   if (pathname.startsWith("/app/fixes")) return "fixes";
   if (pathname.startsWith("/app/history")) return "history";
+  if (pathname.startsWith("/app/content")) return "content";
+  if (pathname.startsWith("/app/performance")) return "performance";
   if (pathname.startsWith("/app/settings")) return "settings";
   return "overview";
 }

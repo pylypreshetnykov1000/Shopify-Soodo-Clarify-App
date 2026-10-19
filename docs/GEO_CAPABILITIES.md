@@ -55,7 +55,7 @@ Readiness is not a ranking and a full score does not guarantee indexing, recomme
 
 ## Simple view, AI sales and search listings
 
-- **Simple Overview** is the default: readiness, sales from AI assistants, and three plain-language next steps built from the fix plan (`app/core/actions.ts`). The Detailed view keeps every chart and list; the choice is stored on the store (`Store.detailed`).
+- **Dashboard**: readiness, AI visibility, three plain-language next steps built from the action plan (`app/core/actions.ts`), who AI recommends and AI sales figures. Charts live on **Performance**; drafts and published changes on **Content**. `Store.detailed` is no longer used.
 - **AI-referred orders** (`app/core/attribution.ts`, `app/services/orders.server.ts`): orders from the last 30 days are read in batches of 100 (8 pages per request, resumable, with a lease). An order counts when its last, otherwise first, visit has an AI assistant referrer (chatgpt.com, perplexity.ai, gemini.google.com, copilot.microsoft.com, claude.ai, meta.ai, grok.com, chat.deepseek.com) or UTM source (for example `utm_source=chatgpt.com`). Test and cancelled orders are skipped. Figures are a floor: in-app browsers may send no referrer. Requires `read_orders` and Shopify's protected customer data access at Level 1 (no names, emails, addresses or phones are read). Only the last 60 days are available without `read_all_orders`; the app reads 30.
 - **Search listing** (`app/core/listing.ts`): suggestion from product data only; title ≤ 70 characters, description ≤ 320 (about 160 shown). Published through `productUpdate(seo)` using the same draft, lock, journal, verification and restore pipeline as descriptions (`kind = "seo"`).
 - **Buyer Q&A**: optional section in description drafts; each question answered only with a verified fact.
@@ -71,7 +71,7 @@ Readiness is not a ranking and a full score does not guarantee indexing, recomme
 
 ## Readiness history
 
-One reading per store per UTC day (readiness, fully ready products, active products, open fixes) is saved after a completed scan, a completed live-check batch, and each published or restored description. Later readings on the same day replace earlier ones. The Overview trend shows the last 90 days and ends at the current figure; nothing is backfilled for days before the first reading. History is deleted with the store on uninstall or shop redaction. The demo seeds a few weeks of sample readings.
+One reading per store per UTC day (readiness, fully ready products, active products, open fixes) is saved after a completed scan, a completed live-check batch, and each published or restored description. Later readings on the same day replace earlier ones. The Performance trend shows the last 90 days and ends at the current figure; nothing is backfilled for days before the first reading. History is deleted with the store on uninstall or shop redaction. The demo seeds a few weeks of sample readings.
 
 ## Deployment
 

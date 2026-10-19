@@ -26,14 +26,16 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   };
 };
 
-const NAV: { to: string; name: string; icon: IconName }[] = [
-  { to: "/app", name: "Overview", icon: "grid" },
-  { to: "/app/visibility", name: "AI visibility", icon: "chat" },
-  { to: "/app/products", name: "Products", icon: "box" },
-  { to: "/app/fixes", name: "Fix plan", icon: "list" },
-  { to: "/app/history", name: "Change history", icon: "history" },
-  { to: "/app/settings", name: "Settings", icon: "settings" },
-  { to: "/app/help", name: "Help", icon: "help" },
+/** The loop first (measure, plan, write, track), then the tools. */
+const NAV: { to: string; name: string; icon: IconName; group: "main" | "more"; also?: string[] }[] = [
+  { to: "/app", name: "Dashboard", icon: "grid", group: "main" },
+  { to: "/app/visibility", name: "AI visibility", icon: "chat", group: "main" },
+  { to: "/app/fixes", name: "Action plan", icon: "list", group: "main" },
+  { to: "/app/content", name: "Content", icon: "doc", group: "main", also: ["/app/history"] },
+  { to: "/app/performance", name: "Performance", icon: "chart", group: "main" },
+  { to: "/app/products", name: "Products", icon: "box", group: "more" },
+  { to: "/app/settings", name: "Settings", icon: "settings", group: "more" },
+  { to: "/app/help", name: "Help", icon: "help", group: "more" },
 ];
 
 export default function App() {
@@ -53,8 +55,21 @@ export default function App() {
   }, [pending]);
   const slow = pending !== null && slowKey === pending;
   const section = NAV.find((item) =>
-    item.to === "/app" ? pathname === "/app" || pathname === "/app/" : pathname.startsWith(item.to),
+    item.to === "/app"
+      ? pathname === "/app" || pathname === "/app/"
+      : [item.to, ...(item.also ?? [])].some((to) => pathname.startsWith(to)),
   )?.to;
+  const link = (item: (typeof NAV)[number]) => (
+    <AppLink
+      key={item.to}
+      to={item.to}
+      current={section === item.to}
+      className={`nav-link${section === item.to ? " selected" : ""}`}
+    >
+      <Icon name={item.icon} size={16} />
+      {item.name}
+    </AppLink>
+  );
   const shell = (
     <HelpProvider>
     <div className={demo ? "app-shell" : "app-shell embedded-shell"}>
@@ -75,17 +90,9 @@ export default function App() {
           Soodo <span className="brand-tag">GEO</span>
         </AppLink>
         <nav aria-label="Main navigation">
-          {NAV.map((item) => (
-            <AppLink
-              key={item.to}
-              to={item.to}
-              current={section === item.to}
-              className={`nav-link${section === item.to ? " selected" : ""}`}
-            >
-              <Icon name={item.icon} size={16} />
-              {item.name}
-            </AppLink>
-          ))}
+          {NAV.filter((item) => item.group === "main").map(link)}
+          <span className="nav-divider" aria-hidden="true" />
+          {NAV.filter((item) => item.group === "more").map(link)}
         </nav>
         <div className="sidebar-foot">
           <strong>{demo ? "Trail Supply" : shop.replace(".myshopify.com", "")}</strong>
@@ -112,13 +119,13 @@ export default function App() {
     <AppProvider apiKey={apiKey}>
       <NavMenu>
         <a href="/app" rel="home">
-          Overview
+          Dashboard
         </a>
-        <a href="/app/products">Products</a>
-        <a href="/app/fixes">Fix plan</a>
-        <a href="/app/history">Change history</a>
-        <a href="/app/settings">Settings</a>
-        <a href="/app/help">Help</a>
+        {NAV.filter((item) => item.to !== "/app").map((item) => (
+          <a key={item.to} href={item.to}>
+            {item.name}
+          </a>
+        ))}
       </NavMenu>
       {shell}
     </AppProvider>

@@ -43,6 +43,8 @@ export type FixGroup = {
   destination: Destination;
   products: { recordId: string; title: string; evidence: string }[];
 };
+/** Checks fixed by writing: the description, its facts and the search listing. */
+export const CONTENT_CHECKS = new Set(["description", "visible-facts", "conflicts", "search-preview"]);
 export type LiveStatus = "ok" | "issues" | "unchecked" | "none";
 
 /** One pass over the catalog for the overview, product list and fix plan. */
@@ -143,6 +145,9 @@ export async function catalogOverview(shop: string) {
         conflicts: specs.conflicts.length,
       },
       needsRescan: report.needsRescan,
+      content: report.checks
+        .filter((c) => CONTENT_CHECKS.has(c.id) && c.status === "action")
+        .map((c) => ({ id: c.id, label: c.label })),
       draft:
         draft && draft.fingerprint === fingerprint(product) ? draft.id : null,
       liveCheckedAt: row.liveCheckedAt?.toISOString() ?? null,

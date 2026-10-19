@@ -34,7 +34,9 @@ export type GuideTopic =
   | "live"
   | "fixes"
   | "history"
-  | "settings";
+  | "settings"
+  | "content"
+  | "performance";
 
 export const GUIDE_PDF = "/guide/Soodo-GEO-User-Guide.pdf";
 const img = (name: string) => `/guide/${name}.jpg`;
@@ -44,7 +46,7 @@ export const WORKFLOW = [
   { title: "Check live pages", text: "Opens each published product page and robots.txt, the way a crawler does." },
   {
     title: "Fix issues",
-    text: "Work through the fix plan. Most fixes are made in Shopify; missing specifications are added through Soodo.",
+    text: "Work through the action plan. Most fixes are made in Shopify; missing specifications are added through Soodo.",
   },
   { title: "Review and publish", text: "Approve the proposed description. Soodo publishes it and checks the result." },
 ];
@@ -54,116 +56,30 @@ export const CHAPTERS: GuideChapter[] = [
     id: "overview",
     number: "01",
     kicker: "Home screen",
-    title: "Overview",
-    why: "The Overview answers two questions: how ready are my products, and what should I do next? It opens in a simple view; switch to Detailed for charts.",
+    title: "Dashboard",
+    why: "The Dashboard answers three questions: how ready are my products, does AI recommend me, and what should I do next?",
     plates: [
       {
         image: img("17-simple-overview"),
-        alt: "Simple Overview: AI readiness score, AI visibility, products ready, things to fix, next steps and sales from AI assistants",
-        caption: "Overview, simple view (the default)",
+        alt: "Dashboard: AI readiness score, AI visibility, products ready, things to fix, next steps, who AI recommends and sales from AI assistants",
+        caption: "Dashboard",
         width: 1584,
-        height: 1496,
+        height: 1368,
         legend: [
           { title: "AI readiness score", text: "One score from 0 to 100 with a plain label: Needs work below 50, Getting there from 50, Good from 80 (the mark on the bar)." },
           { title: "AI visibility", text: "How often Gemini named or cited your store in the last visibility test. Next to it: how many active products have nothing left to fix, and how many fixes are open." },
           { title: "Your next steps", text: "The three most useful things to do now, in plain words. Start at the top; each button takes you there or starts the job." },
-          { title: "Sales from AI assistants", text: "Revenue from orders that started in ChatGPT, Perplexity, Gemini and others in the last 30 days." },
-          { title: "Simple or Detailed", text: "Detailed adds the charts, area scores and full lists. Soodo remembers your choice." },
+          { title: "Who AI recommends", text: "From the last visibility test: how often you appeared, and the brands Gemini suggested most instead." },
+          { title: "Sales from AI assistants", text: "Orders and revenue from ChatGPT, Perplexity, Gemini and others in the last 30 days. The breakdown is on Performance." },
           { title: "Help", text: "Opens this guide for the screen you’re on. You can also press ?." },
         ],
       },
-      {
-        image: img("01-overview"),
-        alt: "Overview: readiness 82%, next step card, setup progress and four area tiles",
-        caption: "Overview, detailed view",
-        width: 1584,
-        height: 802,
-        legend: [
-          {
-            title: "Catalog readiness",
-            text: "The average score of your active products, and how much it changed in the last 30 days. 100 means every check that could run has passed.",
-          },
-          {
-            title: "Next step",
-            text: "The single most useful thing to do now. Press the button; Soodo takes you there or starts the job.",
-          },
-          { title: "Setup progress", text: "Import catalog, check live pages, fix issues. A tick means the step is done." },
-          {
-            title: "Readiness by area",
-            text: "Share of products that pass each area. “Run live checks to measure” means that area waits on step 2. Click a tile to see its fixes.",
-          },
-          { title: "Scan catalog", text: "Run a new scan after you change products in Shopify." },
-        ],
-      },
-      {
-        image: img("04-overview-panels"),
-        alt: "Overview panels: readiness over time, products by readiness, top fixes, needs attention, store-wide signals and recent changes",
-        caption: "Further down the Overview",
-        width: 1584,
-        height: 2150,
-        legend: [
-          { title: "Readiness over time", text: "One reading per day, saved after scans, live checks and published changes." },
-          {
-            title: "Products by readiness",
-            text: "How many products are Strong, Good, Fair or Weak, so a good average can’t hide weak products.",
-          },
-          {
-            title: "Top fixes",
-            text: "The five fixes with the most impact. “2/3” means two of your three active products are affected.",
-          },
-          { title: "Needs attention", text: "Products with the lowest score. Click one to open it." },
-          { title: "Store-wide signals", text: "Policies, contact details and crawler access that apply to every product." },
-          { title: "Recent changes", text: "The latest descriptions and search listings you published or restored." },
-        ],
-      },
-      {
-        image: img("05-trend-tooltip"),
-        alt: "Readiness chart with a tooltip showing date, readiness and open fixes",
-        caption: "Hover the chart, or focus it and use the arrow keys",
-        width: 1584,
-        height: 495,
-        legend: [
-          {
-            title: "Daily detail",
-            text: "The date, the readiness score, how many products were fully ready and how many fixes were open that day.",
-          },
-        ],
-      },
     ],
   },
-  {
-    id: "sales",
-    number: "02",
-    kicker: "Results",
-    title: "Sales from AI assistants",
-    why: "The clearest sign your work is paying off: orders from shoppers who found you through an AI assistant.",
-    plates: [
-      {
-        image: img("18-ai-sales"),
-        alt: "Sales from AI assistants: orders, revenue, revenue by assistant and recent orders",
-        caption: "Sales from AI assistants, last 30 days",
-        width: 1584,
-        height: 1033,
-        legend: [
-          { title: "Orders", text: "Orders in the last 30 days whose visit came from an AI assistant, out of all your orders." },
-          { title: "Revenue", text: "What those orders were worth, and their share of all your sales." },
-          { title: "By assistant", text: "Which assistants sent the most revenue." },
-          { title: "Recent orders", text: "The latest AI-referred orders and the product page they landed on." },
-          { title: "Refresh", text: "Updates the figures. Soodo also refreshes them automatically when you open the Overview." },
-        ],
-      },
-    ],
-    notes: [
-      {
-        kind: "tip",
-        title: "How it’s counted",
-        text: "Shopify records the website each visit came from. Soodo counts orders whose first or last visit came from chatgpt.com, perplexity.ai, gemini.google.com, Copilot, Claude and similar. Some assistants don’t pass this on, so the real number can be higher. Soodo never reads who placed an order.",
-      },
-    ],
-  },
+
   {
     id: "visibility",
-    number: "03",
+    number: "02",
     kicker: "Results",
     title: "AI visibility",
     why: "Shoppers increasingly ask AI assistants what to buy. This test shows whether Gemini recommends your store, who it recommends instead, and which websites it trusts.",
@@ -198,8 +114,123 @@ export const CHAPTERS: GuideChapter[] = [
     ],
   },
   {
-    id: "scan",
+    id: "fixes",
+    number: "03",
+    kicker: "Step 3 · across products",
+    title: "Action plan",
+    why: "Every open fix across your active products, ranked by impact. Fix the same issue on several products in one pass.",
+    plates: [
+      {
+        image: img("13-fix-plan"),
+        alt: "Action plan with store-wide issue, area and priority filters, and an expanded fix",
+        caption: "Action plan with one fix opened",
+        width: 1584,
+        height: 1179,
+        legend: [
+          { title: "Store-wide", text: "One change in Shopify settings helps every product." },
+          { title: "Area filter", text: "Show fixes for one area only." },
+          { title: "Priority filter", text: "Click High, Medium or Low; click again to clear." },
+          { title: "Impact", text: "How many active products the fix affects." },
+          {
+            title: "How and where",
+            text: "What to do, and whether it’s done in Soodo, the Shopify product editor or your theme.",
+          },
+          { title: "Affected products", text: "Open takes you to the right tab of that product." },
+        ],
+      },
+    ],
+  },
+  {
+    id: "content",
     number: "04",
+    kicker: "Writing",
+    title: "Content",
+    why: "Everything Soodo writes for your products, in one place: drafts waiting for you, products whose text needs work, and what you have published.",
+    plates: [
+      {
+        image: img("23-content"),
+        alt: "Content: drafts waiting for review, products that need better content, and recently published changes",
+        caption: "Content",
+        width: 1584,
+        height: 858,
+        legend: [
+          { title: "At a glance", text: "Drafts waiting for you, products whose description, facts or search listing need work, and changes published from Soodo." },
+          { title: "Waiting for your review", text: "Descriptions and search listings drafted but not yet published. Review opens the draft on the product." },
+          { title: "Products that need better content", text: "Most issues first. Description opens the product's specifications to draft a description; Listing opens its search listing." },
+          { title: "Recently published", text: "The latest changes. Every one is saved and can be restored from History." },
+        ],
+      },
+    ],
+  },
+  {
+    id: "performance",
+    number: "05",
+    kicker: "Results",
+    title: "Performance",
+    why: "Whether the work is paying off: readiness by area and over time, AI visibility test by test, and sales from AI assistants.",
+    plates: [
+      {
+        image: img("24-performance"),
+        alt: "Performance: readiness by area, sales from AI assistants, AI visibility over time, readiness over time and products by readiness",
+        caption: "Performance",
+        width: 1584,
+        height: 1579,
+        legend: [
+          { title: "Readiness by area", text: "Share of products that pass each area. “Run live checks to measure” means that area waits on the live page check. Click a tile to see its fixes." },
+          { title: "Sales from AI assistants", text: "Orders and revenue from AI assistants, by assistant, with the latest orders." },
+          { title: "AI visibility over time", text: "The score of each visibility test. Run a test weekly to build the trend." },
+          { title: "Readiness over time", text: "One reading per day, saved after scans, live checks and published changes." },
+          { title: "Products by readiness", text: "How many products are Strong, Good, Fair or Weak, so a good average can’t hide weak products." },
+        ],
+      },
+      {
+        image: img("05-trend-tooltip"),
+        alt: "Readiness chart with a tooltip showing date, readiness and open fixes",
+        caption: "Hover the chart, or focus it and use the arrow keys",
+        width: 1584,
+        height: 495,
+        legend: [
+          {
+            title: "Daily detail",
+            text: "The date, the readiness score, how many products were fully ready and how many fixes were open that day.",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "sales",
+    number: "06",
+    kicker: "Results",
+    title: "Sales from AI assistants",
+    why: "The clearest sign your work is paying off: orders from shoppers who found you through an AI assistant.",
+    plates: [
+      {
+        image: img("18-ai-sales"),
+        alt: "Sales from AI assistants: orders, revenue, revenue by assistant and recent orders",
+        caption: "Sales from AI assistants, last 30 days",
+        width: 1584,
+        height: 1033,
+        legend: [
+          { title: "Orders", text: "Orders in the last 30 days whose visit came from an AI assistant, out of all your orders." },
+          { title: "Revenue", text: "What those orders were worth, and their share of all your sales." },
+          { title: "By assistant", text: "Which assistants sent the most revenue." },
+          { title: "Recent orders", text: "The latest AI-referred orders and the product page they landed on." },
+          { title: "Refresh", text: "Updates the figures. Soodo also refreshes them automatically when you open the Dashboard or Performance." },
+        ],
+      },
+    ],
+    notes: [
+      {
+        kind: "tip",
+        title: "How it’s counted",
+        text: "Shopify records the website each visit came from. Soodo counts orders whose first or last visit came from chatgpt.com, perplexity.ai, gemini.google.com, Copilot, Claude and similar. Some assistants don’t pass this on, so the real number can be higher. Soodo never reads who placed an order.",
+      },
+    ],
+  },
+  {
+    id: "scan",
+    number: "07",
     kicker: "Steps 1 and 2",
     title: "Scan and live checks",
     why: "Both jobs run in small batches with a progress bar, so large catalogs never time out. You can pause and continue later; finished work is kept.",
@@ -239,7 +270,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "products",
-    number: "05",
+    number: "08",
     kicker: "Catalog",
     title: "Products",
     why: "Every product with its score, its next fix and its live page status. Click anywhere on a row to open the product.",
@@ -267,7 +298,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "product",
-    number: "06",
+    number: "09",
     kicker: "Product page",
     title: "A product’s checks",
     why: "Each product has three tabs: Checks, Specifications and Live page. Checks lists what to fix, grouped by area, with the most important one already open.",
@@ -303,7 +334,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "specs",
-    number: "07",
+    number: "10",
     kicker: "Step 3 · in Soodo",
     title: "Adding specifications",
     why: "Assistants answer buyers’ questions from what is written on the page. Soodo finds the key facts for each type of product and helps you write the missing ones into the description.",
@@ -342,7 +373,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "listing",
-    number: "08",
+    number: "11",
     kicker: "Product page",
     title: "Search listing",
     why: "The title and short description people see on Google, and that AI answers often quote. Soodo suggests one from your product data; you edit and approve it.",
@@ -377,7 +408,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "publish",
-    number: "09",
+    number: "12",
     kicker: "Step 4",
     title: "Review and publish",
     why: "You always see the exact wording before anything is published. Soodo keeps your existing text and adds one clear specifications list at the end.",
@@ -411,7 +442,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "live",
-    number: "10",
+    number: "13",
     kicker: "Product page",
     title: "Live page",
     why: "What search engines and AI assistants actually see when they open the product page.",
@@ -444,36 +475,10 @@ export const CHAPTERS: GuideChapter[] = [
       },
     ],
   },
-  {
-    id: "fixes",
-    number: "11",
-    kicker: "Step 3 · across products",
-    title: "Fix plan",
-    why: "Every open fix across your active products, ranked by impact. Fix the same issue on several products in one pass.",
-    plates: [
-      {
-        image: img("13-fix-plan"),
-        alt: "Fix plan with store-wide issue, area and priority filters, and an expanded fix",
-        caption: "Fix plan with one fix opened",
-        width: 1584,
-        height: 1179,
-        legend: [
-          { title: "Store-wide", text: "One change in Shopify settings helps every product." },
-          { title: "Area filter", text: "Show fixes for one area only." },
-          { title: "Priority filter", text: "Click High, Medium or Low; click again to clear." },
-          { title: "Impact", text: "How many active products the fix affects." },
-          {
-            title: "How and where",
-            text: "What to do, and whether it’s done in Soodo, the Shopify product editor or your theme.",
-          },
-          { title: "Affected products", text: "Open takes you to the right tab of that product." },
-        ],
-      },
-    ],
-  },
+
   {
     id: "history",
-    number: "12",
+    number: "14",
     kicker: "Undo",
     title: "Change history",
     why: "Every description Soodo published, with the version it replaced.",
@@ -505,7 +510,7 @@ export const CHAPTERS: GuideChapter[] = [
   },
   {
     id: "settings",
-    number: "13",
+    number: "15",
     kicker: "Setup",
     title: "Settings and permissions",
     why: "Choose which specification checklist applies, and see which Shopify permissions Soodo has.",
@@ -612,7 +617,7 @@ export const GLOSSARY: [term: string, meaning: string][] = [
     "Readiness",
     "A score from 0 to 100. High-priority checks count three times, medium twice, low once. Checks that couldn’t run are left out.",
   ],
-  ["Active product", "A product with status Active in Shopify. Draft and archived products are left out of the fix plan."],
+  ["Active product", "A product with status Active in Shopify. Draft and archived products are left out of the action plan."],
   [
     "Shopify product category",
     "The standard category from Shopify’s product taxonomy, such as Apparel › Coats. Different from the free-text product type.",
@@ -636,8 +641,8 @@ export const GLOSSARY: [term: string, meaning: string][] = [
 
 /** Chapters that usually come next after reading one. */
 export const RELATED: Record<GuideTopic, GuideTopic[]> = {
-  overview: ["visibility", "sales", "fixes"],
-  sales: ["overview", "visibility", "fixes"],
+  overview: ["visibility", "fixes", "performance"],
+  sales: ["performance", "visibility", "overview"],
   visibility: ["overview", "fixes", "product"],
   listing: ["publish", "product", "history"],
   scan: ["overview", "live", "settings"],
@@ -647,7 +652,9 @@ export const RELATED: Record<GuideTopic, GuideTopic[]> = {
   publish: ["history", "specs", "listing"],
   live: ["product", "fixes"],
   fixes: ["product", "specs", "live"],
-  history: ["publish"],
+  history: ["content", "publish"],
+  content: ["publish", "listing", "history"],
+  performance: ["sales", "visibility", "overview"],
   settings: ["scan", "specs"],
 };
 

@@ -79,16 +79,6 @@ async function shot(name, from, to, { pad = 20, left = 224 } = {}) {
   });
   console.log("saved", name);
 }
-async function setView(view) {
-  await page.goto(base + "/app");
-  const button = page.getByRole("group", { name: "Overview view" }).getByRole("button", { name: view });
-  if ((await button.getAttribute("aria-pressed")) !== "true") {
-    await button.click();
-    await page.waitForTimeout(600);
-  }
-  await settle();
-}
-
 // First visit: an empty catalog shows "Get started".
 await page.goto(base + "/app");
 await settle();
@@ -137,7 +127,7 @@ await shot("22-visibility", ".page-heading", ".visibility-columns");
 await clear();
 await hideToasts(false);
 
-// Simple Overview (default) and AI sales.
+// Dashboard.
 await page.goto(base + "/app");
 await page.locator(".sales-value").first().waitFor();
 await settle();
@@ -145,11 +135,25 @@ await annotate([
   [".summary-score", 1],
   [".summary-card .summary-stat", 2, 0],
   [".next-steps", 3],
-  [".ai-sales", 4],
-  [".view-switch", 5],
+  ['section[aria-labelledby="dashboard-visibility"]', 4],
+  [".ai-sales", 5],
   [".help-button", 6],
 ]);
 await shot("17-simple-overview", ".page-heading", ".simple-columns");
+await clear();
+
+// Performance, with AI sales in full and the trend tooltip.
+await page.goto(base + "/app/performance");
+await page.locator(".sales-value").first().waitFor();
+await settle();
+await annotate([
+  [".area-grid", 1],
+  [".ai-sales", 2],
+  ['section[aria-labelledby="visibility-history"]', 3],
+  ['section[aria-labelledby="trend-title"]', 4],
+  ['section[aria-labelledby="distribution-title"]', 5],
+]);
+await shot("24-performance", ".page-heading", ".overview-columns");
 await clear();
 await annotate([
   [".sales-figures > div", 1, 0],
@@ -160,37 +164,14 @@ await annotate([
 ]);
 await shot("18-ai-sales", ".ai-sales", ".ai-sales");
 await clear();
-
-// Detailed Overview.
-await setView("Detailed");
-await annotate([
-  [".hero-figure", 1],
-  [".hero-next", 2],
-  [".steps-card", 3],
-  [".area-grid", 4],
-  [".page-heading .page-actions", 5],
-]);
-await shot("01-overview", ".page-heading", ".area-grid");
-await clear();
-await annotate([
-  [".overview-column:nth-child(1) .panel", 1, 0],
-  [".overview-column:nth-child(2) .panel", 2, 0],
-  [".overview-column:nth-child(1) .panel", 3, 1],
-  [".overview-column:nth-child(2) .panel", 4, 1],
-  [".overview-column:nth-child(1) .panel", 5, 2],
-  [".overview-column:nth-child(2) .panel", 6, 2],
-]);
-await shot("04-overview-panels", ".overview-columns", ".overview-columns");
-await clear();
 const trend = page.locator(".trend svg");
 const tb = await trend.boundingBox();
 await page.mouse.move(tb.x + tb.width * 0.62, tb.y + 70);
 await settle();
 await annotate([[".chart-tooltip", 1]]);
-await shot("05-trend-tooltip", ".overview-column:nth-child(1) .panel", ".overview-column:nth-child(1) .panel");
+await shot("05-trend-tooltip", 'section[aria-labelledby="trend-title"]', 'section[aria-labelledby="trend-title"]');
 await clear();
 await page.mouse.move(5, 5);
-await setView("Simple");
 
 // Products.
 await page.goto(base + "/app/products");
@@ -269,8 +250,21 @@ await annotate([[".draft-columns", 1], [".draft-actions form:first-child", 2]]);
 await shot("20-listing-review", ".tabs", ".draft-card");
 await clear();
 await hideToasts(false);
-await page.getByRole("button", { name: "Reject draft" }).click();
 await settle();
+
+// Content: the listing draft above waits for review.
+await page.goto(base + "/app/content");
+await settle();
+await hideToasts(true);
+await annotate([
+  [".content-summary", 1],
+  ['section[aria-labelledby="review"]', 2],
+  ['section[aria-labelledby="needs-content"]', 3],
+  ['section[aria-labelledby="published"]', 4],
+]);
+await shot("23-content", ".page-heading", ".content-columns");
+await clear();
+await hideToasts(false);
 
 // Live page (the tent carries duplicate product markup in the demo).
 await page.goto(base + "/app/products");

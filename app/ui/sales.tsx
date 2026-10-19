@@ -1,4 +1,4 @@
-import { Empty, formatDate, Icon, Panel, Spinner } from "./common";
+import { AppLink, Empty, formatDate, Icon, Panel, Spinner } from "./common";
 import { CountUp } from "./motion";
 
 export type AiSales = {
@@ -40,11 +40,14 @@ export function AiSalesPanel({
   connected,
   updating,
   onRefresh,
+  compact = false,
 }: {
   sales: AiSales;
   connected: boolean;
   updating: boolean;
   onRefresh: () => void;
+  /** Figures only, with a link to Performance for the breakdown. */
+  compact?: boolean;
 }) {
   const pct = share(sales);
   const top = Math.max(1, ...sales.byAssistant.map((a) => a.revenue));
@@ -94,7 +97,14 @@ export function AiSalesPanel({
               {pct !== null && <span className="stat-note">{pct}% of your sales</span>}
             </div>
           </div>
-          {sales.orders > 0 ? (
+          {compact ? (
+            <div className="next-foot">
+              <AppLink to="/app/performance" className="panel-link">
+                See sales by assistant
+                <Icon name="arrow" size={13} />
+              </AppLink>
+            </div>
+          ) : sales.orders > 0 ? (
             <>
               <ul className="assistant-bars" aria-label="Revenue by assistant">
                 {sales.byAssistant.map((a) => (
@@ -134,10 +144,12 @@ export function AiSalesPanel({
               here.
             </Empty>
           )}
+          {!compact && (
           <p className="sales-note">
             Counts orders whose visit came from an AI assistant. Some assistants don’t pass this on, so the real
             number can be higher.
           </p>
+          )}
         </>
       )}
     </Panel>

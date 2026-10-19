@@ -12,7 +12,7 @@ import {
   summarizeTest,
   templateQuestions,
 } from "../app/core/visibility";
-import { continueTest, startTest, visibilityHeadline, visibilitySummary } from "../app/services/visibility.server";
+import { continueTest, startTest, visibilitySummary } from "../app/services/visibility.server";
 import { EngineError, type VisibilityEngine } from "../app/services/gemini.server";
 
 function product(title: string, productType: string, price: string, overrides: Partial<ProductData> = {}): ProductData {
@@ -168,8 +168,6 @@ test("a test asks every question in batches, then scores the store", async () =>
   assert.equal(summary.latest?.score, Math.round((backpack / 5) * 100));
   assert.equal(summary.latest?.competitors[0].name, "Patagonia");
   assert.deepEqual(summary.history.map((h) => h.score), [summary.latest!.score]);
-  const headline = await visibilityHeadline(shop);
-  assert.deepEqual([headline?.answered, headline?.appeared], [5, backpack]);
   // Nothing left to ask.
   assert.equal((await continueTest(shop, gemini)).done, true);
 });

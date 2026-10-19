@@ -146,7 +146,7 @@ export default function FixPlan() {
     <>
       <div className="page-heading">
         <div>
-          <h1>Fix plan</h1>
+          <h1>Action plan</h1>
           <p>
             {data.fixPlan.length
               ? `${data.fixPlan.length} fixes across ${affected} of ${data.summary.active} active products, highest impact first.`

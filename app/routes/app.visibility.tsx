@@ -297,7 +297,7 @@ export default function Visibility() {
                       <small>Specs, sizes, materials and use cases written on the product page.</small>
                     </div>
                     <AppLink to="/app/fixes" className="button compact">
-                      Fix plan
+                      Action plan
                     </AppLink>
                   </li>
                   <li>

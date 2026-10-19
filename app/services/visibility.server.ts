@@ -219,24 +219,3 @@ export async function visibilitySummary(shop: string, configured: boolean, now =
 }
 export type VisibilitySummary = Awaited<ReturnType<typeof visibilitySummary>>;
 
-/** The latest score for the Overview, without the detail. */
-export async function visibilityHeadline(shop: string) {
-  const latest = await db.visibilityTest.findFirst({
-    where: { shop, status: "DONE" },
-    orderBy: { createdAt: "desc" },
-    select: {
-      score: true,
-      createdAt: true,
-      assistant: true,
-      answers: { where: { status: "DONE" }, select: { appearance: true } },
-    },
-  });
-  if (!latest) return null;
-  return {
-    score: latest.score ?? 0,
-    assistant: latest.assistant,
-    createdAt: latest.createdAt.toISOString(),
-    answered: latest.answers.length,
-    appeared: latest.answers.filter((a) => a.appearance !== "absent").length,
-  };
-}

@@ -2,7 +2,7 @@ import type { Destination, Priority } from "./geo";
 
 /**
  * Plain-language versions of each check, for people new to GEO. The detailed
- * views keep the precise names; the simple Overview speaks in outcomes.
+ * views keep the precise names; the Dashboard speaks in outcomes.
  */
 export const PLAIN: Record<string, string> = {
   publication: "Publish products that are ready to sell",

@@ -3434,13 +3434,6 @@ th:last-child {
 .impact-bar {
   flex-shrink: 0;
 }
-@media (min-width: 901px) {
-  /* The two chart panels open the columns; give them one height so the
-     columns start on a shared line. */
-  .overview-column > .panel:first-child {
-    min-height: 290px;
-  }
-}
 .panel-rows .row-main strong {
   font-size: 13.5px;
 }
@@ -4660,5 +4653,76 @@ th:last-child {
   .rank-bars li {
     grid-template-columns: minmax(0, 104px) minmax(0, 1fr) 46px;
     gap: 8px;
+  }
+}
+
+/* Performance: visibility score per test, coloured by band. */
+.score-history .rank-track > span.pass {
+  background: var(--accent);
+}
+.score-history .rank-track > span.medium {
+  background: var(--medium);
+}
+.score-history .rank-track > span.high {
+  background: var(--high);
+}
+
+/* ------------------------------------------------- dashboard, content */
+
+.cta-body {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding-top: 2px;
+}
+.cta-body small {
+  color: var(--muted);
+}
+.who-list > li {
+  min-height: 52px;
+}
+.who-list > li:first-child {
+  background: var(--accent-soft);
+}
+.who-list .badge {
+  font-variant-numeric: tabular-nums;
+}
+.row-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.summary-card.content-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.content-columns {
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+}
+@media (max-width: 1100px) {
+  .summary-card.content-summary > .summary-stat {
+    border-top: 0;
+  }
+  .summary-card.content-summary > .summary-stat + .summary-stat {
+    border-left: 1px solid var(--line);
+  }
+}
+@media (max-width: 900px) {
+  .content-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 720px) {
+  .summary-card.content-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .summary-card.content-summary > .summary-stat + .summary-stat {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .content-needs > li {
+    flex-wrap: wrap;
+  }
+  .content-needs .row-actions {
+    margin-left: 46px;
   }
 }

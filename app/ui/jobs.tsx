@@ -191,3 +191,27 @@ export function JobPanels({
     </>
   );
 }
+
+/**
+ * Sales from AI assistants, kept fresh without asking: updates once per visit
+ * when stale. A refresh the merchant asked for is confirmed; background
+ * updates stay quiet unless they fail.
+ */
+export function useAiSalesRefresh(sales: { stale: boolean; syncing: boolean }, connected: boolean, enabled = true) {
+  const orders = useOrdersSync();
+  const [manual, setManual] = useState(false);
+  const once = useRef(false);
+  useEffect(() => {
+    if (once.current || !enabled || !connected || !sales.stale || sales.syncing) return;
+    once.current = true;
+    orders.start();
+  }, [enabled, connected, sales.stale, sales.syncing, orders]);
+  return {
+    updating: orders.running || sales.syncing,
+    refresh: () => {
+      setManual(true);
+      orders.start();
+    },
+    notice: manual || orders.result?.ok === false ? orders.result : null,
+  };
+}

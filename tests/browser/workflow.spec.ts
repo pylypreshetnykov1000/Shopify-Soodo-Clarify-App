@@ -16,17 +16,6 @@ test.beforeEach(async ({ page }) => {
     throw error;
   });
 });
-/** The Overview remembers Simple or Detailed; tests choose explicitly. */
-async function overviewView(page: Page, view: "Simple" | "Detailed") {
-  await page.goto("/app");
-  const button = page.getByRole("group", { name: "Overview view" }).getByRole("button", { name: view });
-  if ((await button.getAttribute("aria-pressed")) !== "true") {
-    const saved = page.waitForResponse((r) => r.url().includes("/app/view") && r.request().method() === "POST");
-    await button.click();
-    await saved;
-  }
-  await expect(button).toHaveAttribute("aria-pressed", "true");
-}
 const fits = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
@@ -34,7 +23,7 @@ test("merchant can search, draft, approve, publish and restore", async ({
   page,
 }) => {
   await page.goto("/app");
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await page.getByRole("link", { name: "Products", exact: true }).click();
   await page.getByRole("textbox", { name: "Search products" }).fill("Summit");
   await expect(page.getByRole("link", { name: /Trail 28 Backpack/ })).toHaveCount(0);
@@ -58,7 +47,9 @@ test("merchant can search, draft, approve, publish and restore", async ({
   await page.getByRole("button", { name: "Publish to demo catalog" }).click();
   await expect(page.locator(".notice.success")).toContainText("published and verified");
   await expect(page.getByText("5 / 5 found", { exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Change history", exact: true }).click();
+  await page.getByRole("link", { name: "Content", exact: true }).click();
+  await expect(page.getByRole("region", { name: "Recently published" })).toContainText("Summit Shell Jacket");
+  await page.getByRole("link", { name: "History", exact: true }).click();
   const latest = page.locator(".history-card").first();
   await latest.locator('input[name="confirmed"]').check();
   await latest.getByRole("button", { name: "Restore previous description" }).click();
@@ -70,7 +61,7 @@ test("mobile navigation and settings remain usable", async ({ page }) => {
   await page.goto("/app/settings");
   await expect(page.getByRole("heading", { name: "Specification checklist" })).toBeVisible();
   expect(await fits(page)).toBe(true);
-  await page.getByRole("link", { name: "Overview", exact: true }).click();
+  await page.getByRole("link", { name: "Dashboard", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Your next steps" })).toBeVisible();
 });
 
@@ -156,7 +147,7 @@ test("live page checks surface visibility fixes in the plan and on the product",
   page,
 }) => {
   await page.goto("/app/fixes");
-  await expect(page.getByRole("heading", { name: "Fix plan", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Action plan", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Check live pages" }).click();
   await expect(page.locator(".notice.success")).toContainText("Live page checks complete");
   // The demo tent page carries a duplicate Product block from an old app.
@@ -174,19 +165,18 @@ test("live page checks surface visibility fixes in the plan and on the product",
   await expect(page.locator("#training-crawlers li").filter({ hasText: "GPTBot" })).toContainText("Blocked");
   await page.getByRole("button", { name: "Check again" }).click();
   await expect(page.locator(".notice.success")).toContainText(/moment ago|Live check/);
-  await overviewView(page, "Detailed");
+  await page.goto("/app/performance");
   await expect(page.getByRole("region", { name: "Readiness by area" }).locator(".area-tile")).toHaveCount(4);
-  await expect(page.getByRole("list", { name: "Setup progress" }).locator("li").nth(1)).toHaveClass(/done/);
-  await expect(page.getByRole("heading", { name: "Store-wide signals" })).toBeVisible();
-  await expect(page.locator(".signal").filter({ hasText: "Shipping policy" })).toContainText("Not set up");
+  await page.goto("/app/fixes");
+  await expect(page.locator(".store-fixes")).toContainText("Shipping policy");
 });
 
 test("overview and product workspace fit narrow screens and link to the next fix", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await overviewView(page, "Simple");
-  await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: "Dashboard", exact: true })).toBeVisible();
   expect(await fits(page)).toBe(true);
   await page.locator(".next-list").getByRole("link").first().click();
   await expect(page.locator("h1")).toBeVisible();
@@ -382,13 +372,7 @@ test("legacy data is marked not checked until a scan collects it, and old GEO li
   await expect(page.getByText("Vendor: Trail Supply", { exact: true })).toBeVisible();
 });
 
-test("the overview guides the next step and tabs support the keyboard", async ({ page }) => {
-  await overviewView(page, "Detailed");
-  const next = page.locator(".brand-hero");
-  await expect(next.getByText("Next step", { exact: true })).toBeVisible();
-  const progress = page.getByRole("list", { name: "Setup progress" });
-  await expect(progress.locator("li")).toHaveCount(3);
-  await expect(progress.locator("li").first()).toHaveClass(/done/);
+test("product tabs support the keyboard and one check opens at a time", async ({ page }) => {
   await page.goto("/app/products");
   await page.getByRole("link", { name: /Summit Shell Jacket/ }).first().click();
   const checks = page.getByRole("tab", { name: /Checks/ });
@@ -415,11 +399,9 @@ test("the overview guides the next step and tabs support the keyboard", async ({
   expect(await page.locator(".collapse:not(.open)").first().evaluate((el) => (el as HTMLElement).inert)).toBe(true);
 });
 
-test("overview, products and fix plan connect through filters, sorting and whole-row links", async ({ page }) => {
-  await overviewView(page, "Detailed");
-  await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Recent changes" })).toBeVisible();
-  // Area tiles open the fix plan filtered to that area.
+test("performance, products and the action plan connect through filters, sorting and whole-row links", async ({ page }) => {
+  await page.goto("/app/performance");
+  // Area tiles open the action plan filtered to that area.
   await page.getByRole("link", { name: /^Content:/ }).click();
   await expect(page).toHaveURL(/\/app\/fixes\?area=content/);
   const areaFilter = page.getByRole("group", { name: "Filter by area" });
@@ -453,12 +435,13 @@ test("overview, products and fix plan connect through filters, sorting and whole
   await expect(page.getByRole("heading", { name: "Checks and next steps" })).toBeVisible();
 });
 
-test("the overview hero and charts show readiness, its trend and its spread", async ({ page }) => {
-  await overviewView(page, "Detailed");
-  const hero = page.locator(".brand-hero");
-  await expect(hero.locator(".hero-number")).toHaveText(/^\d+%$/);
-  // The demo carries a few weeks of history, so the hero reports the change.
-  await expect(hero.locator(".delta")).toContainText("pts");
+test("the dashboard score and performance charts show readiness, its trend and its spread", async ({ page }) => {
+  await page.goto("/app");
+  const summary = page.getByRole("region", { name: "AI readiness score" });
+  await expect(summary.locator(".summary-number")).toHaveText(/^\d+\/100$/);
+  // The demo carries a few weeks of history, so the score reports the change.
+  await expect(summary.locator(".delta")).toContainText("points");
+  await page.getByRole("link", { name: "Performance", exact: true }).click();
   const trend = page.getByRole("img", { name: /^Catalog readiness over time:/ });
   await expect(trend).toBeVisible();
   // Every reading is also available as a table for assistive technology.
@@ -481,9 +464,12 @@ test("the overview hero and charts show readiness, its trend and its spread", as
 
 test("help opens the right chapter for each screen and links to the full guide", async ({ page }) => {
   const expectations: [string, string][] = [
-    ["/app", "Overview"],
+    ["/app", "Dashboard"],
+    ["/app/visibility", "AI visibility"],
+    ["/app/fixes", "Action plan"],
+    ["/app/content", "Content"],
+    ["/app/performance", "Performance"],
     ["/app/products", "Products"],
-    ["/app/fixes", "Fix plan"],
     ["/app/history", "Change history"],
     ["/app/settings", "Settings and permissions"],
   ];
@@ -506,14 +492,14 @@ test("help opens the right chapter for each screen and links to the full guide",
   await page.getByRole("button", { name: "Help", exact: true }).click();
   await expect(page.getByRole("dialog").getByRole("heading", { name: "Live page", exact: true })).toBeVisible();
   // Related topics switch the panel in place.
-  await page.getByRole("dialog").getByRole("button", { name: /Fix plan/ }).click();
-  await expect(page.getByRole("dialog").getByRole("heading", { name: "Fix plan", exact: true })).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: /Action plan/ }).click();
+  await expect(page.getByRole("dialog").getByRole("heading", { name: "Action plan", exact: true })).toBeVisible();
   await page.getByRole("dialog").getByRole("link", { name: "Open full guide" }).click();
   await expect(page).toHaveURL(/\/app\/help#fixes$/);
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByRole("heading", { name: "Help and guide" })).toBeVisible();
-  // Introduction, twelve chapters, troubleshooting and glossary.
-  await expect(page.locator(".guide-section")).toHaveCount(16);
+  // Introduction, fifteen chapters, troubleshooting and glossary.
+  await expect(page.locator(".guide-section")).toHaveCount(18);
   await expect(page.getByRole("link", { name: "Help", exact: true })).toHaveAttribute("aria-current", "page");
 });
 
@@ -529,8 +515,8 @@ test("pressing ? opens help for the current screen, but not while typing", async
   await expect(page.getByRole("dialog")).toBeHidden();
 });
 
-test("the simple overview shows a plain score and three plain next steps", async ({ page }) => {
-  await overviewView(page, "Simple");
+test("the dashboard shows a plain score, three plain next steps and who AI recommends", async ({ page }) => {
+  await page.goto("/app");
   const summary = page.getByRole("region", { name: "AI readiness score" });
   await expect(summary.locator(".badge")).toHaveText(/Needs work|Getting there|Good/);
   await expect(summary.getByText("Products fully ready")).toBeVisible();
@@ -540,17 +526,22 @@ test("the simple overview shows a plain score and three plain next steps", async
   // The first step is the primary action and is written in plain words.
   await expect(steps.first().locator(".button")).toHaveClass(/primary/);
   await expect(page.getByText("structured data", { exact: false })).toHaveCount(0);
-  // Detailed views stay one click away, and the choice is remembered.
-  await page.getByRole("button", { name: "Show charts and details" }).click();
-  await expect(page.getByRole("region", { name: "Readiness by area" })).toBeVisible();
-  await page.reload();
-  await expect(page.getByRole("region", { name: "Readiness by area" })).toBeVisible();
-  await overviewView(page, "Simple");
+  // Charts live on Performance; the Dashboard stays short.
   await expect(page.getByRole("region", { name: "Readiness by area" })).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Who AI recommends" })).toBeVisible();
+  // The menu follows the loop: measure, plan, write, track.
+  const menu = page.getByRole("navigation", { name: "Main navigation" }).getByRole("link");
+  await expect(menu).toHaveText(["Dashboard", "AI visibility", "Action plan", "Content", "Performance", "Products", "Settings", "Help"]);
 });
 
 test("sales from AI assistants count only orders that came from an assistant", async ({ page }) => {
-  await overviewView(page, "Simple");
+  await page.goto("/app");
+  // The Dashboard shows the figures; Performance has the breakdown.
+  const compact = page.getByRole("region", { name: "Sales from AI assistants" });
+  await expect(compact.locator(".sales-value").first()).toHaveText("6");
+  await expect(compact.getByRole("list", { name: "Revenue by assistant" })).toHaveCount(0);
+  await compact.getByRole("link", { name: "See sales by assistant" }).click();
+  await expect(page.getByRole("heading", { name: "Performance", exact: true })).toBeVisible();
   const panel = page.getByRole("region", { name: "Sales from AI assistants" });
   // The demo has six AI-referred orders among 44, worth $1,652.
   await expect(panel.locator(".sales-value").first()).toHaveText("6");
@@ -580,7 +571,7 @@ test("a search listing is suggested, edited, approved, published and restored", 
   await page.getByRole("button", { name: "Publish to demo catalog" }).click();
   await expect(page.locator(".notice.success")).toContainText("Search listing published and verified");
   await expect(page.getByLabel("Current listing")).toContainText("28 L hiking daypack");
-  await page.getByRole("link", { name: "Change history", exact: true }).click();
+  await page.goto("/app/history");
   const entry = page.locator(".history-card").filter({ hasText: "Search listing" }).first();
   await entry.getByRole("button", { name: "View saved descriptions" }).click();
   await expect(entry).toContainText("Title: Trail 28 Backpack – 28 L hiking daypack | Trail Supply");
@@ -621,13 +612,45 @@ test("an AI visibility test shows where Gemini recommends the store and who it s
   // A question opens to the full answer.
   await questions.filter({ hasText: /pack/i }).first().locator("summary").click();
   await expect(questions.filter({ hasText: /pack/i }).first().locator(".answer-text")).toContainText("Trail 28 Backpack");
-  // The Overview shows the same score and links back.
-  await overviewView(page, "Simple");
+  // The Dashboard shows the same score and who was recommended instead.
+  await page.getByRole("link", { name: "Dashboard", exact: true }).click();
   const overview = page.getByRole("region", { name: "AI readiness score" });
   await expect(overview.getByRole("link", { name: /Named or cited in \d+ of 12 answers/ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Who AI recommends" }).locator("li").nth(1)).toContainText("REI Co-op");
+  // Performance charts the score test by test.
+  await page.getByRole("link", { name: "Performance", exact: true }).click();
+  await expect(page.getByRole("list", { name: "AI visibility by test" }).locator("li")).toHaveCount(1);
   expect(await fits(page)).toBe(true);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/app/visibility");
   await expect(page.getByRole("region", { name: "AI visibility score" })).toBeVisible();
+  expect(await fits(page)).toBe(true);
+});
+
+test("content gathers drafts, products that need better text and published changes", async ({ page }) => {
+  await page.goto("/app/content");
+  await expect(page.getByRole("heading", { name: "Content", exact: true })).toBeVisible();
+  const needs = page.getByRole("region", { name: "Products that need better content" });
+  await expect(needs.locator("li").first()).toBeVisible();
+  // A product's Description button opens its specifications, where drafts start.
+  await needs.getByRole("link", { name: /^Write description for/ }).first().click();
+  await expect(page.getByRole("tab", { name: /Specifications/ })).toHaveAttribute("aria-selected", "true");
+  // A draft waits on Content until it is published.
+  await page.goto("/app/products");
+  await page.getByRole("link", { name: /Ridge Fleece/ }).first().click();
+  await page.getByRole("tab", { name: /Search listing/ }).click();
+  await page.getByRole("button", { name: "Create listing draft" }).click();
+  await expect(page.getByRole("heading", { name: "Review search listing" })).toBeVisible();
+  await page.getByRole("link", { name: "Content", exact: true }).click();
+  const review = page.getByRole("region", { name: "Waiting for your review" });
+  await expect(review.locator("li").filter({ hasText: "Ridge Fleece" })).toContainText("Search listing");
+  await review.getByRole("link", { name: "Review search listing for Ridge Fleece" }).click();
+  await expect(page.getByRole("heading", { name: "Review search listing" })).toBeVisible();
+  await page.getByRole("button", { name: "Reject draft" }).click();
+  await page.goto("/app/content");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  expect(await fits(page)).toBe(true);
+  await page.goto("/app/performance");
   expect(await fits(page)).toBe(true);
 });

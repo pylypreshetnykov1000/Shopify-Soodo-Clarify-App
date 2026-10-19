@@ -41,3 +41,22 @@ export async function readinessTrend(shop: string, days = 90, now = new Date()) 
   });
   return rows;
 }
+
+/**
+ * The saved trend, ending at today's live figure so a chart always agrees
+ * with the score shown beside it, even before today's reading is saved.
+ */
+export async function liveTrend(
+  shop: string,
+  summary: { readiness: number; ready: number; active: number },
+  fixes: number,
+  now = new Date(),
+) {
+  const trend = await readinessTrend(shop, 90, now);
+  if (!summary.active) return trend;
+  const today = dayOf(now);
+  return [
+    ...trend.filter((p) => p.day !== today),
+    { day: today, readiness: summary.readiness, ready: summary.ready, active: summary.active, fixes },
+  ];
+}
