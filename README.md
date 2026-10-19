@@ -18,7 +18,11 @@ On Windows, stop the dev server before rerunning `npm run setup`: a running Pris
 
 ## What works
 
-- **Overview:** catalog readiness, top fixes ranked by priority × products affected, and store-wide signals (storefront password, crawler access, refund/shipping/privacy/contact policies).
+- **Simple Overview (default):** readiness, sales from AI assistants, and "Your next steps" in plain language. A Simple/Detailed switch (saved per store) shows the full dashboard: area tiles, readiness trend and distribution, top fixes, store-wide signals and recent changes. New stores get a one-click **Get started** that imports products, then checks live pages.
+- **Sales from AI assistants:** orders whose first or last visit came from ChatGPT, Perplexity, Gemini, Copilot, Claude, Meta AI, Grok or DeepSeek (referrer or UTM source), with revenue, share of sales, revenue by assistant and recent orders. Only order number, amount, assistant and landing page are stored; customer redaction requests delete them; rows older than 90 days are removed.
+- **Search listing:** a suggested SEO title and meta description built from the product's title, brand, category, description and verified facts, editable with a Google-style preview, then draft → approve → publish → verify → restore like descriptions.
+- **Buyer Q&A:** optionally added to description drafts, answering each buyer question only with a verified fact.
+- **In-app help:** a Help panel per screen and a Help page, with annotated screenshots (see Guide below).
 - **One-click scan:** imports products in small batches with progress and pause; collects category, category attributes, variants (barcodes, SKUs, prices, availability), media, SEO fields and store policies.
 - **Live page checks:** loads the public product page and robots.txt over HTTPS (public addresses only, bounded time and size), then reports HTTP status, password protection, noindex, canonical, Product JSON-LD (duplicates, invalid blocks, price/stock mismatches with Shopify), whether published specs are visible, and access for search, assistant and training crawlers.
 - **19 product checks** in four groups (visibility, identity, content, offer & trust), each with evidence, priority and a concrete next step. Readiness weights checks by priority and ignores checks that could not run.
@@ -30,13 +34,24 @@ On Windows, stop the dev server before rerunning `npm run setup`: a running Pris
 
 Draft generation uses deterministic templates. No external language model is connected, and the app does not claim to measure or guarantee AI rankings. Publishing appends a visible specifications section to the existing product description, rather than writing new metafields or changing theme code.
 
+## Guide
+
+The in-app help and `docs/guide` (HTML and PDF) come from `app/core/guide.ts` and the screenshots in `public/guide`. After changing screens, run the demo, then:
+
+```powershell
+$env:GUIDE_URL="http://127.0.0.1:3000"; $env:GUIDE_DB="prisma/dev.sqlite"; npm run guide:capture
+npm run guide:build
+```
+
+`guide:capture` resets the demo store and walks through every screen, drawing numbered callouts. `guide:build` writes `docs/guide/index.html`, the PDF, and the PDF served by the app.
+
 ## Connect Shopify
 
 The app uses Shopify's official React Router starter and GraphQL Admin API `2026-10`. The local config has been linked to a Shopify app; use your own app's client ID when deploying a separate installation.
 
 1. Create or select an app and a development store in the Shopify Dev Dashboard.
 2. Run `npm run config:link` and complete Shopify's interactive authentication to link the app.
-3. Keep the `read_products,write_products,read_metaobjects,read_legal_policies` scopes and webhook subscriptions in `shopify.app.toml`. Existing installations are asked to approve the two new read scopes; until then, policies show as "not checked".
+3. Keep the `read_products,write_products,read_metaobjects,read_legal_policies,read_orders` scopes and webhook subscriptions in `shopify.app.toml`. Existing installations are asked to approve the two new read scopes; until then, policies show as "not checked".
 4. Run `npm run dev` and install the app on the development store.
 5. Run scans until complete, create a draft, publish, inspect the actual storefront, and restore it.
 

@@ -184,3 +184,54 @@ Sitemap: ${DEMO_ORIGIN}/sitemap.xml
 User-agent: GPTBot
 Disallow: /
 `;
+
+/**
+ * Sample orders for the demo's "sales from AI assistants": a month of orders,
+ * a few of them referred by assistants the way Shopify records it.
+ */
+export function demoOrders(now = new Date()) {
+  const product = (handle: string, utm?: string) =>
+    `${DEMO_ORIGIN}/products/${handle}${utm ? `?utm_source=${utm}` : ""}`;
+  const ai: [daysAgo: number, amount: number, referrer: string | null, landing: string][] = [
+    [2, 189, "https://chatgpt.com/", product("summit-shell-jacket", "chatgpt.com")],
+    [5, 349, "https://www.perplexity.ai/", product("basecamp-two-tent")],
+    [9, 129, null, product("trail-28-backpack", "chatgpt.com")],
+    [13, 318, "https://chatgpt.com/", product("trail-28-backpack", "chatgpt.com")],
+    [18, 189, "https://gemini.google.com/", product("summit-shell-jacket")],
+    [24, 478, "https://www.perplexity.ai/", product("basecamp-two-tent")],
+  ];
+  const other = ["https://www.google.com/", "https://www.instagram.com/", null, "https://www.bing.com/"];
+  const orders = [];
+  for (let i = 0; i < 38; i++) {
+    const daysAgo = (i * 29) / 38 + 0.3;
+    orders.push({
+      id: `gid://shopify/Order/demo-${1000 + i}`,
+      name: `#${1100 + i}`,
+      createdAt: new Date(now.getTime() - daysAgo * 86_400_000).toISOString(),
+      test: false,
+      cancelledAt: null,
+      amount: [129, 189, 79, 349, 258][i % 5],
+      currency: "USD",
+      journey: {
+        firstVisit: { referrerUrl: other[i % other.length], landingPage: `${DEMO_ORIGIN}/`, utmParameters: null },
+        lastVisit: { referrerUrl: other[(i + 1) % other.length], landingPage: `${DEMO_ORIGIN}/collections/all`, utmParameters: null },
+      },
+    });
+  }
+  ai.forEach(([daysAgo, amount, referrer, landing], i) =>
+    orders.push({
+      id: `gid://shopify/Order/demo-ai-${i}`,
+      name: `#${1200 + i}`,
+      createdAt: new Date(now.getTime() - daysAgo * 86_400_000).toISOString(),
+      test: false,
+      cancelledAt: null,
+      amount,
+      currency: "USD",
+      journey: {
+        firstVisit: { referrerUrl: referrer, landingPage: landing, utmParameters: null },
+        lastVisit: { referrerUrl: referrer, landingPage: landing, utmParameters: null },
+      },
+    }),
+  );
+  return orders.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}

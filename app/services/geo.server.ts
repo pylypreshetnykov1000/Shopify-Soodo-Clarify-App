@@ -14,6 +14,8 @@ import {
 import { PROFILES, resolveProfile } from "../core/profiles";
 import type { LiveCheck } from "../core/storefront";
 import { fingerprint } from "./drafts.server";
+import { listingFingerprint } from "./catalog.server";
+import { currentListing, suggestListing, type Listing } from "../core/listing";
 
 const parseJson = <T>(value: string | null): T | null => {
   if (!value) return null;
@@ -56,7 +58,7 @@ export async function catalogOverview(shop: string) {
         liveCheck: true,
         liveCheckedAt: true,
         suggestions: {
-          where: { status: "DRAFT" },
+          where: { status: "DRAFT", kind: "description" },
           orderBy: { createdAt: "desc" },
           take: 1,
           select: { id: true, fingerprint: true },
@@ -198,9 +200,21 @@ export async function productWorkspace(shop: string, id: string) {
     db.store.findUnique({ where: { shop } }),
     db.catalogProduct.findFirst({
       where: { shop, id },
-      include: { suggestions: { orderBy: { createdAt: "desc" }, take: 1 } },
+      include: {
+        suggestions: {
+          where: { kind: "description" },
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
     }),
   ]);
+  const listingDraft = row
+    ? await db.suggestion.findFirst({
+        where: { productId: row.id, kind: "seo" },
+        orderBy: { createdAt: "desc" },
+      })
+    : null;
   if (!row) throw new Response("Product not found", { status: 404 });
   const product = JSON.parse(row.payload) as ProductData;
   const live = parseJson<LiveCheck>(row.liveCheck);
@@ -240,6 +254,25 @@ export async function productWorkspace(shop: string, id: string) {
           stale: draft.fingerprint !== fingerprint(product),
         }
       : null,
+    listing: {
+      url: product.discovery?.onlineStoreUrl ?? null,
+      current: currentListing(product),
+      // What Google shows when no custom listing is set.
+      fallback: {
+        title: product.title,
+        description: previewText(product.descriptionHtml).replace(/\s+/g, " ").slice(0, 160),
+      },
+      suggested: suggestListing(product, specs.facts),
+      draft: listingDraft
+        ? {
+            id: listingDraft.id,
+            status: listingDraft.status,
+            before: JSON.parse(listingDraft.beforeHtml) as Listing,
+            after: JSON.parse(listingDraft.afterHtml) as Listing,
+            stale: listingDraft.fingerprint !== listingFingerprint(product),
+          }
+        : null,
+    },
     adminUrl: adminProductUrl(shop, product.id),
   };
 }

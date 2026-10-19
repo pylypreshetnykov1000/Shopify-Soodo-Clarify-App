@@ -46,8 +46,32 @@ model Store {
   scanTotal   Int?
   profile     String?
   profileAt   DateTime?
+  /// Overview shows the detailed dashboard instead of the simple view.
+  detailed    Boolean  @default(false)
+  /// AI-referred order sync: progress while running, totals once finished.
+  ordersSync  String?
+  orderStats  String?
+  ordersSyncedAt DateTime?
   products    CatalogProduct[]
   snapshots   ReadinessSnapshot[]
+  aiOrders    AiOrder[]
+}
+
+/// An order whose visit came from an AI assistant. Holds no customer data.
+model AiOrder {
+  id          String   @id @default(cuid())
+  shop        String
+  orderGid    String
+  name        String
+  createdAt   DateTime
+  amount      Float
+  currency    String
+  assistant   String
+  touch       String
+  landingPage String?
+  store       Store    @relation(fields: [shop], references: [shop], onDelete: Cascade)
+  @@unique([shop, orderGid])
+  @@index([shop, createdAt])
 }
 
 /// One readiness reading per store per UTC day, for the trend chart.
@@ -88,6 +112,8 @@ model CatalogProduct {
 model Suggestion {
   id          String   @id @default(cuid())
   productId   String
+  /// "description" or "seo" (search listing: JSON {title, description}).
+  kind        String   @default("description")
   fingerprint String
   beforeHtml  String
   afterHtml   String
@@ -102,6 +128,7 @@ model Suggestion {
 model Change {
   id           String   @id @default(cuid())
   productId    String
+  kind         String   @default("description")
   suggestionId String
   beforeHtml   String
   afterHtml    String

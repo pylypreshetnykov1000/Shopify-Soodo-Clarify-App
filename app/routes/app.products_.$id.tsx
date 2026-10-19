@@ -13,9 +13,11 @@ import { GROUPS, type CheckGroup, type GeoCheck } from "../core/geo";
 import { context } from "../services/context.server";
 import {
   createDraft,
+  createListingDraft,
   publishDraft,
   rejectDraft,
 } from "../services/catalog.server";
+import { LISTING_LIMITS, type Listing } from "../core/listing";
 import { productWorkspace } from "../services/geo.server";
 import { checkLivePage } from "../services/live.server";
 import { recordSnapshot } from "../services/snapshots.server";
@@ -60,12 +62,22 @@ export async function action({ request, params }: ActionFunctionArgs) {
           String(form.get(rule.key) ?? ""),
         ]),
       );
-      await createDraft(ctx.shop, id, ctx.adapter, input);
+      await createDraft(ctx.shop, id, ctx.adapter, input, { faq: form.get("faq") === "yes" });
       return {
         ok: true,
         focusDraft: true,
         message:
           "Draft created. Review the sources and proposed description before publishing.",
+      };
+    }
+    if (intent === "listing-draft") {
+      await createListingDraft(ctx.shop, id, ctx.adapter, {
+        title: String(form.get("seoTitle") ?? ""),
+        description: String(form.get("seoDescription") ?? ""),
+      });
+      return {
+        ok: true,
+        message: "Listing draft created. Check the preview, then approve it to publish.",
       };
     }
     const suggestionId = String(form.get("suggestionId") ?? "");
@@ -100,7 +112,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
 }
 
 type Data = Awaited<ReturnType<typeof loader>>;
-type TabId = "checks" | "specs" | "live";
+type TabId = "checks" | "specs" | "listing" | "live";
 
 function LiveForm({ busy, label = "Check live page", compact, primary }: { busy: boolean; label?: string; compact?: boolean; primary?: boolean }) {
   const navigation = useNavigation();
@@ -274,7 +286,11 @@ function ChecksPanel({ data, busy, goTo }: { data: Data; busy: boolean; goTo: (t
   const [showPassed, setShowPassed] = useState(false);
   const passed = report.checks.filter((c) => c.status === "pass");
   const cta = (check: GeoCheck) =>
-    check.destination === "facts" ? (
+    check.id === "search-preview" ? (
+      <button type="button" className="button compact primary" onClick={() => goTo("listing")}>
+        Improve listing
+      </button>
+    ) : check.destination === "facts" ? (
       <button type="button" className="button compact primary" onClick={() => goTo("specs")}>
         Add specifications
       </button>
@@ -507,10 +523,16 @@ function SpecsPanel({ data, busy }: { data: Data; busy: boolean }) {
               );
             })}
             <div className="form-foot">
-              <label className="checkbox">
-                <input type="checkbox" name="confirmed" value="yes" required />
-                <span>The values I add are accurate for this product.</span>
-              </label>
+              <div className="form-options">
+                <label className="checkbox">
+                  <input type="checkbox" name="faq" value="yes" defaultChecked />
+                  <span>Also add a short buyer Q&amp;A built from these facts.</span>
+                </label>
+                <label className="checkbox">
+                  <input type="checkbox" name="confirmed" value="yes" required />
+                  <span>The values I add are accurate for this product.</span>
+                </label>
+              </div>
               <button
                 className="button primary"
                 disabled={busy || data.row.deleted || !!specs.conflicts.length}
@@ -770,7 +792,8 @@ export default function ProductWorkspace() {
   // Deep links: #specs and #live open their tab; #draft keeps the draft in view.
   useEffect(() => {
     const hash = window.location.hash;
-    const target: TabId | null = hash === "#specs" ? "specs" : hash === "#live" ? "live" : null;
+    const target: TabId | null =
+      hash === "#specs" ? "specs" : hash === "#live" ? "live" : hash === "#listing" ? "listing" : null;
     if (!target) return;
     const frame = requestAnimationFrame(() => setTab(target));
     return () => cancelAnimationFrame(frame);
@@ -813,7 +836,11 @@ export default function ProductWorkspace() {
           <Dial value={report.readiness} label="Product readiness" />
           <div className="page-actions">
             {/* Help follows the open tab; a pending draft is the publish step. */}
-            <HelpButton topic={tab === "specs" ? (pending ? "publish" : "specs") : tab === "live" ? "live" : "product"} />
+            <HelpButton
+              topic={
+                tab === "specs" ? (pending ? "publish" : "specs") : tab === "live" ? "live" : tab === "listing" ? "listing" : "product"
+              }
+            />
             {data.adminUrl && (
               <ExternalLink href={data.adminUrl} className="button">
                 Edit in Shopify
@@ -851,6 +878,11 @@ export default function ProductWorkspace() {
             { id: "checks", label: "Checks", count: report.actions || undefined },
             { id: "specs", label: "Specifications", count: `${specs.facts.length}/${specs.rules.length}` },
             {
+              id: "listing",
+              label: "Search listing",
+              count: data.listing.draft?.status === "DRAFT" ? "Draft" : undefined,
+            },
+            {
               id: "live",
               label: "Live page",
               count: live ? (live.error || live.passwordProtected || live.httpStatus !== 200 ? "!" : undefined) : undefined,
@@ -865,10 +897,186 @@ export default function ProductWorkspace() {
         <SpecsPanel data={data} busy={busy} />
         {draft && !pending && <OldDraft data={data} busy={busy} />}
       </TabPanel>
+      <TabPanel id="listing" active={tab === "listing"}>
+        {/* Remount after each change so the editor starts from the latest suggestion. */}
+        <ListingPanel
+          key={`${data.listing.draft?.id ?? "none"}-${data.listing.draft?.status ?? ""}-${data.listing.current.title}`}
+          data={data}
+          busy={busy}
+        />
+      </TabPanel>
       <TabPanel id="live" active={tab === "live"}>
         <LivePanel data={data} busy={busy} />
       </TabPanel>
     </>
+  );
+}
+
+/** How a listing appears in Google results, so merchants see what they change. */
+function SearchPreview({ listing, url, label }: { listing: Listing; url: string | null; label: string }) {
+  const crumbs = (() => {
+    if (!url) return "your-store.com › products";
+    try {
+      const u = new URL(url);
+      return [u.hostname, ...u.pathname.split("/").filter(Boolean)].join(" › ");
+    } catch {
+      return url;
+    }
+  })();
+  return (
+    <figure className="serp" aria-label={label}>
+      <figcaption>{label}</figcaption>
+      <span className="serp-url">{crumbs}</span>
+      <span className={`serp-title${listing.title.length > LISTING_LIMITS.title ? " over" : ""}`}>
+        {listing.title || "Untitled"}
+      </span>
+      <span className="serp-desc">
+        {listing.description.length > LISTING_LIMITS.idealDescription
+          ? `${listing.description.slice(0, LISTING_LIMITS.idealDescription).trimEnd()}…`
+          : listing.description || "No description"}
+      </span>
+    </figure>
+  );
+}
+
+function ListingPanel({ data, busy }: { data: Data; busy: boolean }) {
+  const navigation = useNavigation();
+  const activeIntent = busy ? navigation.formData?.get("intent") : null;
+  const { listing } = data;
+  const draft = listing.draft;
+  const pending = draft?.status === "DRAFT";
+  const custom = !!(listing.current.title || listing.current.description);
+  const shown = custom
+    ? { title: listing.current.title || listing.fallback.title, description: listing.current.description || listing.fallback.description }
+    : listing.fallback;
+  const [title, setTitle] = useState(listing.suggested.title);
+  const [description, setDescription] = useState(listing.suggested.description);
+
+  if (pending && draft)
+    return (
+      <section className="card draft-card" aria-labelledby="listing-review">
+        <div className="card-heading">
+          <div>
+            <h2 id="listing-review">Review search listing</h2>
+            <p>Check how it will look on Google. Nothing changes until you approve.</p>
+          </div>
+          <Badge tone="info">draft</Badge>
+        </div>
+        {draft.stale && (
+          <div style={{ padding: "16px 20px 0" }}>
+            <Notice tone="error">
+              The listing changed in Shopify after this draft was made. Create a fresh draft before publishing.
+            </Notice>
+          </div>
+        )}
+        <div className="draft-columns">
+          <SearchPreview listing={draft.before.title || draft.before.description ? draft.before : listing.fallback} url={listing.url} label="Now" />
+          <SearchPreview listing={draft.after} url={listing.url} label="Proposed" />
+        </div>
+        <div className="draft-actions">
+          <Form method="post">
+            <input type="hidden" name="intent" value="publish" />
+            <input type="hidden" name="suggestionId" value={draft.id} />
+            <label className="checkbox">
+              <input type="checkbox" name="approved" value="yes" required />
+              <span>I approve this search listing. The previous one is saved in Change history.</span>
+            </label>
+            <button className="button primary" disabled={busy || draft.stale || data.row.deleted} aria-busy={activeIntent === "publish"}>
+              {activeIntent === "publish" && <Spinner />}
+              {activeIntent === "publish" ? "Publishing..." : data.demo ? "Publish to demo catalog" : "Publish to Shopify"}
+            </button>
+          </Form>
+          <Form method="post">
+            <input type="hidden" name="intent" value="reject" />
+            <input type="hidden" name="suggestionId" value={draft.id} />
+            <button className="button" disabled={busy}>
+              {activeIntent === "reject" ? "Rejecting..." : "Reject draft"}
+            </button>
+          </Form>
+        </div>
+      </section>
+    );
+
+  return (
+    <div className="columns">
+      <section className="card" aria-labelledby="listing-heading">
+        <div className="card-heading">
+          <div>
+            <h2 id="listing-heading">Search listing</h2>
+            <p>The title and summary people see on Google and in AI answers before they click. We suggested one from your product data; edit it freely.</p>
+          </div>
+        </div>
+        <Form method="post" className="listing-form">
+          <input type="hidden" name="intent" value="listing-draft" />
+          <label className="listing-field" htmlFor="seo-title">
+            <span className="listing-label">
+              Title
+              <span className={`counter${title.length > LISTING_LIMITS.title ? " over" : ""}`}>
+                {title.length}/{LISTING_LIMITS.title}
+              </span>
+            </span>
+            <input
+              id="seo-title"
+              name="seoTitle"
+              value={title}
+              maxLength={LISTING_LIMITS.title + 30}
+              onChange={(e) => setTitle(e.target.value)}
+              disabled={busy}
+            />
+            <small>Name the product clearly. Add the brand or type if it fits.</small>
+          </label>
+          <label className="listing-field" htmlFor="seo-description">
+            <span className="listing-label">
+              Description
+              <span className={`counter${description.length > LISTING_LIMITS.idealDescription ? " over" : ""}`}>
+                {description.length}/{LISTING_LIMITS.idealDescription}
+              </span>
+            </span>
+            <textarea
+              id="seo-description"
+              name="seoDescription"
+              rows={4}
+              value={description}
+              maxLength={LISTING_LIMITS.description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={busy}
+            />
+            <small>One or two factual sentences. Google usually shows about 160 characters.</small>
+          </label>
+          <SearchPreview listing={{ title, description }} url={listing.url} label="Preview" />
+          <div className="form-foot">
+            <button
+              type="button"
+              className="button quiet"
+              onClick={() => {
+                setTitle(listing.suggested.title);
+                setDescription(listing.suggested.description);
+              }}
+              disabled={busy}
+            >
+              Use suggestion
+            </button>
+            <button className="button primary" disabled={busy || data.row.deleted} aria-busy={activeIntent === "listing-draft"}>
+              {activeIntent === "listing-draft" && <Spinner />}
+              {activeIntent === "listing-draft" ? "Creating draft..." : "Create listing draft"}
+            </button>
+          </div>
+        </Form>
+      </section>
+      <aside className="stack">
+        <section className="card">
+          <div className="card-heading">
+            <div>
+              <h2>On Google now</h2>
+              <p>{custom ? "Your custom listing." : "No custom listing, so Google uses the product title and description."}</p>
+            </div>
+          </div>
+          <div className="card-body">
+            <SearchPreview listing={shown} url={listing.url} label="Current listing" />
+          </div>
+        </section>
+      </aside>
+    </div>
   );
 }
 

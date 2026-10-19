@@ -16,6 +16,10 @@ export interface CatalogAdapter {
   store?(): Promise<StoreProfile | null>;
   /** Total products in Shopify, for scan progress. */
   count?(): Promise<number | null>;
+  /** Orders created since an ISO date, newest first, with visit attribution. */
+  orders?(since: string, cursor: string | null): Promise<{ orders: OrderRecord[]; cursor: string | null }>;
+  /** Writes the product's search listing (SEO title and meta description). */
+  writeSeo?(id: string, seo: { title: string; description: string }): Promise<void>;
 }
 export class WriteRejectedError extends Error {}
 /**
@@ -52,6 +56,38 @@ export const META_QUERY = `query CatalogMetafields($id: ID!, $cursor: String) {
 export const COUNT_QUERY = `query CatalogCount { productsCount(limit: null) { count } }`;
 export const SHOP_QUERY = `query StoreProfile { shop { name contactEmail primaryDomain { url } } }`;
 export const POLICIES_QUERY = `query StorePolicies { shop { shopPolicies { type title url body } } }`;
+export type OrderVisit = {
+  referrerUrl: string | null;
+  landingPage: string | null;
+  utmParameters: { source: string | null } | null;
+} | null;
+export type OrderRecord = {
+  id: string;
+  name: string;
+  createdAt: string;
+  test: boolean;
+  cancelledAt: string | null;
+  amount: number;
+  currency: string;
+  journey: { firstVisit: OrderVisit; lastVisit: OrderVisit } | null;
+};
+// 100 orders × (order + journey + two visits with UTM) stays under the cost limit.
+export const ORDERS_QUERY = `query RecentOrders($cursor: String, $query: String!) {
+  orders(first: 100, after: $cursor, query: $query, sortKey: CREATED_AT, reverse: true) {
+    nodes {
+      id name createdAt test cancelledAt
+      totalPriceSet { shopMoney { amount currencyCode } }
+      customerJourneySummary {
+        firstVisit { referrerUrl landingPage utmParameters { source } }
+        lastVisit { referrerUrl landingPage utmParameters { source } }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+export const SEO_MUTATION = `mutation CatalogSeo($product: ProductUpdateInput!) {
+  productUpdate(product: $product) { product { id } userErrors { field message } }
+}`;
 export const WRITE_MUTATION = `mutation CatalogDescription($product: ProductUpdateInput!) {
   productUpdate(product: $product) { product { id } userErrors { field message } }
 }`;
@@ -282,6 +318,46 @@ export function shopifyAdapter(
         primaryDomain: shop.primaryDomain?.url ?? null,
         policies,
       };
+    },
+    async orders(since, cursor) {
+      const data = await graphql<{
+        orders: {
+          nodes: {
+            id: string;
+            name: string;
+            createdAt: string;
+            test: boolean;
+            cancelledAt: string | null;
+            totalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
+            customerJourneySummary: { firstVisit: OrderVisit; lastVisit: OrderVisit } | null;
+          }[];
+          pageInfo: { hasNextPage: boolean; endCursor: string | null };
+        };
+      }>(admin, ORDERS_QUERY, { cursor, query: `created_at:>='${since}'` });
+      const { nodes, pageInfo } = data.orders;
+      if (pageInfo.hasNextPage && (!pageInfo.endCursor || pageInfo.endCursor === cursor))
+        throw new Error("Shopify returned an invalid pagination cursor.");
+      return {
+        orders: nodes.map((order) => ({
+          id: order.id,
+          name: order.name,
+          createdAt: order.createdAt,
+          test: order.test,
+          cancelledAt: order.cancelledAt,
+          amount: Number(order.totalPriceSet.shopMoney.amount) || 0,
+          currency: order.totalPriceSet.shopMoney.currencyCode,
+          journey: order.customerJourneySummary,
+        })),
+        cursor: pageInfo.hasNextPage ? pageInfo.endCursor : null,
+      };
+    },
+    async writeSeo(id, seo) {
+      const data = await graphql<{
+        productUpdate: { product: { id: string } | null; userErrors: { message: string }[] };
+      }>(admin, SEO_MUTATION, { product: { id, seo } });
+      if (data.productUpdate.userErrors.length)
+        throw new WriteRejectedError(data.productUpdate.userErrors.map((e) => e.message).join("; "));
+      if (!data.productUpdate.product) throw new Error("Shopify did not confirm a product update.");
     },
     async writeDescription(id, html) {
       const data = await graphql<{

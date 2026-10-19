@@ -16,6 +16,17 @@ test.beforeEach(async ({ page }) => {
     throw error;
   });
 });
+/** The Overview remembers Simple or Detailed; tests choose explicitly. */
+async function overviewView(page: Page, view: "Simple" | "Detailed") {
+  await page.goto("/app");
+  const button = page.getByRole("group", { name: "Overview view" }).getByRole("button", { name: view });
+  if ((await button.getAttribute("aria-pressed")) !== "true") {
+    const saved = page.waitForResponse((r) => r.url().includes("/app/view") && r.request().method() === "POST");
+    await button.click();
+    await saved;
+  }
+  await expect(button).toHaveAttribute("aria-pressed", "true");
+}
 const fits = (page: Page) =>
   page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
 
@@ -60,7 +71,7 @@ test("mobile navigation and settings remain usable", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Specification checklist" })).toBeVisible();
   expect(await fits(page)).toBe(true);
   await page.getByRole("link", { name: "Overview", exact: true }).click();
-  await expect(page.getByRole("button", { name: /Scan catalog|Continue scan/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your next steps" })).toBeVisible();
 });
 
 test("demo rejects mutation requests from another origin", async ({ request }) => {
@@ -109,10 +120,9 @@ test("draft facts survive reload, can be revised, and rejection leaves the produ
 test("one click scans the whole catalog and filters work without navigation", async ({
   page,
 }) => {
-  await page.goto("/app");
+  await page.goto("/app/products");
   await page.getByRole("button", { name: /Scan catalog|Continue scan/ }).click();
   await expect(page.locator(".notice.success")).toContainText("Scan complete. 4 products up to date.");
-  await page.getByRole("link", { name: "Products", exact: true }).click();
   await page.getByRole("button", { name: "Draft ready", exact: true }).click();
   await expect(page.locator(".empty")).toContainText("No matching products");
   await page.getByRole("button", { name: "All products", exact: true }).click();
@@ -164,7 +174,7 @@ test("live page checks surface visibility fixes in the plan and on the product",
   await expect(page.locator("#training-crawlers li").filter({ hasText: "GPTBot" })).toContainText("Blocked");
   await page.getByRole("button", { name: "Check again" }).click();
   await expect(page.locator(".notice.success")).toContainText(/moment ago|Live check/);
-  await page.goto("/app");
+  await overviewView(page, "Detailed");
   await expect(page.getByRole("region", { name: "Readiness by area" }).locator(".area-tile")).toHaveCount(4);
   await expect(page.getByRole("list", { name: "Setup progress" }).locator("li").nth(1)).toHaveClass(/done/);
   await expect(page.getByRole("heading", { name: "Store-wide signals" })).toBeVisible();
@@ -175,10 +185,10 @@ test("overview and product workspace fit narrow screens and link to the next fix
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/app");
+  await overviewView(page, "Simple");
   await expect(page.getByRole("heading", { name: "Overview", exact: true })).toBeVisible();
   expect(await fits(page)).toBe(true);
-  await page.locator(".panel-rows").getByRole("link").first().click();
+  await page.locator(".next-list").getByRole("link").first().click();
   await expect(page.locator("h1")).toBeVisible();
   expect(await fits(page)).toBe(true);
   await page.goto("/app/products");
@@ -373,7 +383,7 @@ test("legacy data is marked not checked until a scan collects it, and old GEO li
 });
 
 test("the overview guides the next step and tabs support the keyboard", async ({ page }) => {
-  await page.goto("/app");
+  await overviewView(page, "Detailed");
   const next = page.locator(".brand-hero");
   await expect(next.getByText("Next step", { exact: true })).toBeVisible();
   const progress = page.getByRole("list", { name: "Setup progress" });
@@ -406,7 +416,7 @@ test("the overview guides the next step and tabs support the keyboard", async ({
 });
 
 test("overview, products and fix plan connect through filters, sorting and whole-row links", async ({ page }) => {
-  await page.goto("/app");
+  await overviewView(page, "Detailed");
   await expect(page.getByRole("heading", { name: "Needs attention" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Recent changes" })).toBeVisible();
   // Area tiles open the fix plan filtered to that area.
@@ -444,7 +454,7 @@ test("overview, products and fix plan connect through filters, sorting and whole
 });
 
 test("the overview hero and charts show readiness, its trend and its spread", async ({ page }) => {
-  await page.goto("/app");
+  await overviewView(page, "Detailed");
   const hero = page.locator(".brand-hero");
   await expect(hero.locator(".hero-number")).toHaveText(/^\d+%$/);
   // The demo carries a few weeks of history, so the hero reports the change.
@@ -502,8 +512,8 @@ test("help opens the right chapter for each screen and links to the full guide",
   await expect(page).toHaveURL(/\/app\/help#fixes$/);
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByRole("heading", { name: "Help and guide" })).toBeVisible();
-  // Introduction, ten chapters, troubleshooting and glossary.
-  await expect(page.locator(".guide-section")).toHaveCount(13);
+  // Introduction, twelve chapters, troubleshooting and glossary.
+  await expect(page.locator(".guide-section")).toHaveCount(15);
   await expect(page.getByRole("link", { name: "Help", exact: true })).toHaveAttribute("aria-current", "page");
 });
 
@@ -517,4 +527,75 @@ test("pressing ? opens help for the current screen, but not while typing", async
   // Focus moves into the panel, and the close button returns to the page.
   await page.getByRole("button", { name: "Close help" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
+});
+
+test("the simple overview shows two outcomes and three plain next steps", async ({ page }) => {
+  await overviewView(page, "Simple");
+  const hero = page.getByRole("region", { name: "Your results" });
+  await expect(hero.getByText("How ready your products are")).toBeVisible();
+  await expect(hero.getByText("Sales from AI assistants")).toBeVisible();
+  const steps = page.locator(".next-list > li");
+  await expect(steps).toHaveCount(3);
+  // The first step is the primary action and is written in plain words.
+  await expect(steps.first().locator(".button")).toHaveClass(/primary/);
+  await expect(page.getByText("structured data", { exact: false })).toHaveCount(0);
+  // Detailed views stay one click away, and the choice is remembered.
+  await page.getByRole("button", { name: "Show charts and details" }).click();
+  await expect(page.getByRole("region", { name: "Readiness by area" })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("region", { name: "Readiness by area" })).toBeVisible();
+  await overviewView(page, "Simple");
+  await expect(page.getByRole("region", { name: "Readiness by area" })).toHaveCount(0);
+});
+
+test("sales from AI assistants count only orders that came from an assistant", async ({ page }) => {
+  await overviewView(page, "Simple");
+  const panel = page.getByRole("region", { name: "Sales from AI assistants" });
+  // The demo has six AI-referred orders among 44, worth $1,652.
+  await expect(panel.locator(".sales-value").first()).toHaveText("6");
+  await expect(panel.locator(".sales-value").nth(1)).toHaveText("$1,652");
+  await expect(panel).toContainText("of 44 orders");
+  const bars = panel.getByRole("list", { name: "Revenue by assistant" }).locator("li");
+  await expect(bars).toHaveCount(3);
+  await expect(bars.first()).toContainText("Perplexity");
+  await expect(panel.getByRole("list", { name: "Recent orders from AI assistants" }).locator("li").first()).toContainText("From ChatGPT");
+  await panel.getByRole("button", { name: "Refresh" }).click();
+  await expect(page.locator(".notice.success")).toContainText("Sales updated");
+});
+
+test("a search listing is suggested, edited, approved, published and restored", async ({ page }) => {
+  await page.goto("/app/products");
+  await page.getByRole("link", { name: /Trail 28 Backpack/ }).first().click();
+  // The checks link straight to the listing editor.
+  await page.getByRole("tab", { name: /Search listing/ }).click();
+  const title = page.getByLabel("Title");
+  await expect(title).toHaveValue(/Trail 28 Backpack/);
+  await title.fill("Trail 28 Backpack – 28 L hiking daypack | Trail Supply");
+  await expect(page.locator(".serp-title").first()).toHaveText("Trail 28 Backpack – 28 L hiking daypack | Trail Supply");
+  await page.getByRole("button", { name: "Create listing draft" }).click();
+  await expect(page.getByRole("heading", { name: "Review search listing" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Search listing/ })).toContainText("Draft");
+  await page.locator('input[name="approved"]').check();
+  await page.getByRole("button", { name: "Publish to demo catalog" }).click();
+  await expect(page.locator(".notice.success")).toContainText("Search listing published and verified");
+  await expect(page.getByLabel("Current listing")).toContainText("28 L hiking daypack");
+  await page.getByRole("link", { name: "Change history", exact: true }).click();
+  const entry = page.locator(".history-card").filter({ hasText: "Search listing" }).first();
+  await entry.getByRole("button", { name: "View saved descriptions" }).click();
+  await expect(entry).toContainText("Title: Trail 28 Backpack – 28 L hiking daypack | Trail Supply");
+  await entry.locator('input[name="confirmed"]').check();
+  await entry.getByRole("button", { name: "Restore previous listing" }).click();
+  await expect(page.locator(".notice.success")).toContainText("Previous search listing restored");
+});
+
+test("a new store gets started with one click: import, then live checks", async ({ page }) => {
+  await page.goto("/app");
+  // Empty the demo catalog to see the first-run screen.
+  await db.catalogProduct.deleteMany({ where: { shop: DEMO_SHOP } });
+  await page.goto("/app");
+  await expect(page.getByRole("heading", { name: /how easily AI assistants can find your products/ })).toBeVisible();
+  await page.getByRole("button", { name: "Get started" }).click();
+  await expect(page.locator(".notice.success").filter({ hasText: "Scan complete" })).toBeVisible();
+  await expect(page.locator(".notice.success").filter({ hasText: "Live page checks complete" })).toBeVisible({ timeout: 20000 });
+  await expect(page.getByRole("heading", { name: "Your next steps" })).toBeVisible();
 });

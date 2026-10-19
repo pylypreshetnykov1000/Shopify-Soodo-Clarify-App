@@ -24,7 +24,9 @@
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
-    "typecheck": "react-router typegen && tsc --noEmit"
+    "typecheck": "react-router typegen && tsc --noEmit",
+    "guide:capture": "node scripts/guide/capture.mjs",
+    "guide:build": "node node_modules/tsx/dist/cli.mjs scripts/guide/build.ts"
   },
   "type": "module",
   "engines": {

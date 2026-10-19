@@ -53,10 +53,17 @@ Readiness is not a ranking and a full score does not guarantee indexing, recomme
 - [RFC 9309: Robots Exclusion Protocol](https://www.rfc-editor.org/rfc/rfc9309)
 - [Shopify Admin API 2026-10: Product](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/Product), [ProductVariant](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/ProductVariant), [TaxonomyCategory](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/TaxonomyCategory), [ShopPolicy](https://shopify.dev/docs/api/admin-graphql/2026-10/objects/ShopPolicy)
 
+## Simple view, AI sales and search listings
+
+- **Simple Overview** is the default: readiness, sales from AI assistants, and three plain-language next steps built from the fix plan (`app/core/actions.ts`). The Detailed view keeps every chart and list; the choice is stored on the store (`Store.detailed`).
+- **AI-referred orders** (`app/core/attribution.ts`, `app/services/orders.server.ts`): orders from the last 30 days are read in batches of 100 (8 pages per request, resumable, with a lease). An order counts when its last, otherwise first, visit has an AI assistant referrer (chatgpt.com, perplexity.ai, gemini.google.com, copilot.microsoft.com, claude.ai, meta.ai, grok.com, chat.deepseek.com) or UTM source (for example `utm_source=chatgpt.com`). Test and cancelled orders are skipped. Figures are a floor: in-app browsers may send no referrer. Requires `read_orders` and Shopify's protected customer data access at Level 1 (no names, emails, addresses or phones are read). Only the last 60 days are available without `read_all_orders`; the app reads 30.
+- **Search listing** (`app/core/listing.ts`): suggestion from product data only; title ≤ 70 characters, description ≤ 320 (about 160 shown). Published through `productUpdate(seo)` using the same draft, lock, journal, verification and restore pipeline as descriptions (`kind = "seo"`).
+- **Buyer Q&A**: optional section in description drafts; each question answered only with a verified fact.
+
 ## Readiness history
 
 One reading per store per UTC day (readiness, fully ready products, active products, open fixes) is saved after a completed scan, a completed live-check batch, and each published or restored description. Later readings on the same day replace earlier ones. The Overview trend shows the last 90 days and ends at the current figure; nothing is backfilled for days before the first reading. History is deleted with the store on uninstall or shop redaction. The demo seeds a few weeks of sample readings.
 
 ## Deployment
 
-Run the PostgreSQL migrations `20261016120000_geo_signals` and `20261017090000_readiness_snapshots` (applied automatically by `npm run docker-start`), deploy the app configuration so merchants are asked for the new read scopes, then rescan stores to collect category, variant and policy data. Live Shopify installation, real storefront responses and throttling under load still need testing on a development store.
+Run the PostgreSQL migrations `20261016120000_geo_signals`, `20261017090000_readiness_snapshots` and `20261019090000_ai_orders_and_kinds` (applied automatically by `npm run docker-start`), deploy the app configuration so merchants are asked for the new read scopes, then rescan stores to collect category, variant and policy data. Live Shopify installation, real storefront responses and throttling under load still need testing on a development store.

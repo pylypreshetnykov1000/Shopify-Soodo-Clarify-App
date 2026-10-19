@@ -23,7 +23,12 @@ function stripSpecifications(html: string) {
   for (const range of ranges.sort((a, b) => b.start - a.start)) html = html.slice(0, range.start) + html.slice(range.end);
   return html;
 }
-export function buildDraft(product: ProductData, input: Record<string, string>, profile: ProfileKey = "outdoor") {
+export function buildDraft(
+  product: ProductData,
+  input: Record<string, string>,
+  profile: ProfileKey = "outdoor",
+  options: { faq?: boolean } = {},
+) {
   const result = audit(product, profile);
   if (result.conflicts.length) throw new Error("Conflicting specifications found. Correct the source product data in Shopify and sync again before drafting.");
   const facts: Fact[] = result.rules.flatMap(rule => {
@@ -36,7 +41,17 @@ export function buildDraft(product: ProductData, input: Record<string, string>, 
   });
   if (!facts.length) throw new Error("Add at least one verified specification before creating a draft.");
   const original = stripSpecifications(product.descriptionHtml);
-  const block = `<div data-soodo-specs="v1"><h3>Product specifications</h3><ul>${facts.map(f => `<li><strong>${escapeHtml(f.label)}:</strong> ${escapeHtml(f.value)}</li>`).join("")}</ul></div>`;
+  // Optional buyer Q&A: each verified fact answers the question buyers ask
+  // about it. Nothing is added that isn't already in the facts above.
+  const faq = options.faq
+    ? `<h3>Common questions</h3>${facts
+        .map((f) => {
+          const question = result.rules.find((r) => r.key === f.key)?.question;
+          return question ? `<p><strong>${escapeHtml(question)}</strong><br>${escapeHtml(f.value)}</p>` : "";
+        })
+        .join("")}`
+    : "";
+  const block = `<div data-soodo-specs="v1"><h3>Product specifications</h3><ul>${facts.map(f => `<li><strong>${escapeHtml(f.label)}:</strong> ${escapeHtml(f.value)}</li>`).join("")}</ul>${faq}</div>`;
   const afterHtml = `${original}${original && !original.endsWith("\n") ? "\n" : ""}${block}`;
   if (sameHtml(afterHtml, product.descriptionHtml)) throw new Error("These specifications are already published. No changes are needed.");
   return { facts, afterHtml, beforeHtml: product.descriptionHtml, fingerprint: fingerprint(product) };

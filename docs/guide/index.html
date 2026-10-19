@@ -7,8 +7,6 @@
 <body>
 <title>Soodo GEO Guide</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,500..800&family=Source+Sans+3:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 /* Layout: a field manual. Each chapter is one screen of the app: a framed
@@ -190,7 +188,6 @@ footer { padding-block: 40px 56px; border-top: 1px solid var(--line); color: var
   .contents { break-after: page; }
 }
 </style>
-
 <header class="cover">
   <div class="wrap">
     <div>
@@ -202,35 +199,16 @@ footer { padding-block: 40px 56px; border-top: 1px solid var(--line); color: var
       <p class="lede">How to get your products found by search engines and AI shopping assistants, one screen at a time.</p>
       <div class="meta"><span>For store owners and staff</span><span>Shopify admin app</span><span>Edition · October 2026</span></div>
     </div>
-    <div class="phone"><img src="images/16-phone.jpg" alt="Soodo GEO Overview on a phone: catalog readiness 83%, next step and setup progress" width="390" height="1150"></div>
+    <div class="phone"><img src="images/16-phone.jpg" alt="Soodo GEO Overview on a phone" width="780" height="2300"></div>
   </div>
 </header>
-
 <main>
-<section class="wrap contents" aria-labelledby="toc-title">
-  <h2 id="toc-title">Contents</h2>
-  <ol class="toc">
-    <li><a href="#how"><span class="n">—</span><span>How Soodo works</span></a></li>
-    <li><a href="#ch1"><span class="n">01</span><span>Overview</span></a></li>
-    <li><a href="#ch2"><span class="n">02</span><span>Scan and live checks</span></a></li>
-    <li><a href="#ch3"><span class="n">03</span><span>Products</span></a></li>
-    <li><a href="#ch4"><span class="n">04</span><span>A product’s checks</span></a></li>
-    <li><a href="#ch5"><span class="n">05</span><span>Adding specifications</span></a></li>
-    <li><a href="#ch6"><span class="n">06</span><span>Review and publish</span></a></li>
-    <li><a href="#ch7"><span class="n">07</span><span>Live page</span></a></li>
-    <li><a href="#ch8"><span class="n">08</span><span>Fix plan</span></a></li>
-    <li><a href="#ch9"><span class="n">09</span><span>Change history</span></a></li>
-    <li><a href="#ch10"><span class="n">10</span><span>Settings and permissions</span></a></li>
-    <li><a href="#faq"><span class="n">?</span><span>Troubleshooting</span></a></li>
-    <li><a href="#glossary"><span class="n">A–Z</span><span>Glossary</span></a></li>
-  </ol>
-</section>
-
+<section class="wrap contents" aria-labelledby="toc-title"><h2 id="toc-title">Contents</h2><ol class="toc"><li><a href="#how"><span class="n">—</span><span>How Soodo works</span></a></li><li><a href="#overview"><span class="n">01</span><span>Overview</span></a></li><li><a href="#sales"><span class="n">02</span><span>Sales from AI assistants</span></a></li><li><a href="#scan"><span class="n">03</span><span>Scan and live checks</span></a></li><li><a href="#products"><span class="n">04</span><span>Products</span></a></li><li><a href="#product"><span class="n">05</span><span>A product’s checks</span></a></li><li><a href="#specs"><span class="n">06</span><span>Adding specifications</span></a></li><li><a href="#listing"><span class="n">07</span><span>Search listing</span></a></li><li><a href="#publish"><span class="n">08</span><span>Review and publish</span></a></li><li><a href="#live"><span class="n">09</span><span>Live page</span></a></li><li><a href="#fixes"><span class="n">10</span><span>Fix plan</span></a></li><li><a href="#history"><span class="n">11</span><span>Change history</span></a></li><li><a href="#settings"><span class="n">12</span><span>Settings and permissions</span></a></li><li><a href="#faq"><span class="n">?</span><span>Troubleshooting</span></a></li><li><a href="#glossary"><span class="n">A–Z</span><span>Glossary</span></a></li></ol></section>
 <section class="wrap intro" id="how" aria-labelledby="how-title">
   <div>
     <h2 id="how-title">How Soodo works</h2>
     <p>Google, ChatGPT, Perplexity and other assistants recommend products they can read and trust. Soodo checks each of your products the way those systems see them, then gives you a short list of fixes, most important first.</p>
-    <p>Scanning and checking never change your store. The only thing Soodo writes is a product description, and only after you approve the exact wording. Every previous version is saved and can be restored.</p>
+    <p>Scanning and checking never change your store. Soodo writes only product descriptions and search listings, and only after you approve the exact wording. Every previous version is saved and can be restored.</p>
     <div class="scale" aria-label="Priority levels">
       <div><b><i style="background:#b4321f"></i>High</b><small>Fix first. Blocks discovery.</small></div>
       <div><b><i style="background:#9a6408"></i>Medium</b><small>Weakens how products are matched.</small></div>
@@ -239,262 +217,140 @@ footer { padding-block: 40px 56px; border-top: 1px solid var(--line); color: var
   </div>
   <div>
     <h2>The workflow</h2>
-    <ol class="flow">
-      <li><span class="dot">1</span><div><strong>Scan catalog</strong><span>Imports products, variants, categories and store policies. Read-only.</span></div></li>
-      <li><span class="dot">2</span><div><strong>Check live pages</strong><span>Opens each published product page and robots.txt, the way a crawler does.</span></div></li>
-      <li><span class="dot">3</span><div><strong>Fix issues</strong><span>Work through the fix plan. Most fixes are made in Shopify; missing specifications are added through Soodo.</span></div></li>
-      <li><span class="dot">4</span><div><strong>Review and publish</strong><span>Approve the proposed description. Soodo publishes it and checks the result.</span></div></li>
-    </ol>
+    <ol class="flow"><li><span class="dot">1</span><div><strong>Scan catalog</strong><span>Imports products, variants, categories and store policies. Read-only.</span></div></li><li><span class="dot">2</span><div><strong>Check live pages</strong><span>Opens each published product page and robots.txt, the way a crawler does.</span></div></li><li><span class="dot">3</span><div><strong>Fix issues</strong><span>Work through the fix plan. Most fixes are made in Shopify; missing specifications are added through Soodo.</span></div></li><li><span class="dot">4</span><div><strong>Review and publish</strong><span>Approve the proposed description. Soodo publishes it and checks the result.</span></div></li></ol>
   </div>
 </section>
 
-<section class="wrap chapter" id="ch1" aria-labelledby="ch1-title">
-  <div class="chapter-head"><span class="chapter-num">01</span><span class="chapter-kicker">Home screen</span><h2 id="ch1-title">Overview</h2></div>
-  <p class="why">The Overview answers two questions: how ready is my catalog, and what should I do next? Start here every time.</p>
-  <div class="plate">
-    <figure class="shot"><img src="images/01-overview.jpg" alt="Overview: readiness 82%, next step card, setup progress and four area tiles"><figcaption>Overview, before the first live check</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Catalog readiness</b><span>The average score of your active products, and how much it changed in the last 30 days. 100 means every check that could run has passed.</span></div></li>
-      <li><span class="c">2</span><div><b>Next step</b><span>The single most useful thing to do now. Press the button; Soodo takes you there or starts the job.</span></div></li>
-      <li><span class="c">3</span><div><b>Setup progress</b><span>Import catalog, check live pages, fix issues. A tick means the step is done.</span></div></li>
-      <li><span class="c">4</span><div><b>Readiness by area</b><span>Share of products that pass each area. “Run live checks to measure” means that area waits on step 2. Click a tile to see its fixes.</span></div></li>
-      <li><span class="c">5</span><div><b>Scan catalog</b><span>Run a new scan after you change products in Shopify.</span></div></li>
-    </ol>
-  </div>
-  <div class="plate">
-    <figure class="shot"><img src="images/04-overview-panels.jpg" alt="Overview panels: readiness over time, products by readiness, top fixes, needs attention, store-wide signals and recent changes"><figcaption>Further down the Overview</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Readiness over time</b><span>One reading per day, saved after scans, live checks and published changes.</span></div></li>
-      <li><span class="c">2</span><div><b>Products by readiness</b><span>How many products are Strong, Good, Fair or Weak, so a good average can’t hide weak products.</span></div></li>
-      <li><span class="c">3</span><div><b>Top fixes</b><span>The five fixes with the most impact. “2/3” means two of your three active products are affected.</span></div></li>
-      <li><span class="c">4</span><div><b>Needs attention</b><span>Products with the lowest score. Click one to open it.</span></div></li>
-      <li><span class="c">5</span><div><b>Store-wide signals</b><span>Policies, contact details and crawler access that apply to every product.</span></div></li>
-      <li><span class="c">6</span><div><b>Recent changes</b><span>The latest descriptions you published or restored.</span></div></li>
-    </ol>
-  </div>
-  <div class="plate">
-    <figure class="shot"><img src="images/05-trend-tooltip.jpg" alt="Readiness chart with a tooltip showing date, readiness and open fixes"><figcaption>Hover the chart, or focus it and use the arrow keys</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Daily detail</b><span>The date, the readiness score, how many products were fully ready and how many fixes were open that day.</span></div></li>
-    </ol>
-  </div>
+<section class="wrap chapter" id="overview" aria-labelledby="overview-title">
+  <div class="chapter-head"><span class="chapter-num">01</span><span class="chapter-kicker">Home screen</span><h2 id="overview-title">Overview</h2></div>
+  <p class="why">The Overview answers two questions: how ready are my products, and what should I do next? It opens in a simple view; switch to Detailed for charts.</p>
+    <div class="plate">
+      <figure class="shot"><img src="images/17-simple-overview.jpg" alt="Simple Overview: readiness, sales from AI assistants, setup progress and your next steps" width="1584" height="1421"><figcaption>Overview, simple view (the default)</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>How ready your products are</b><span>One score from 0 to 100, and how much it changed in the last 30 days.</span></div></li><li><span class="c">2</span><div><b>Sales from AI assistants</b><span>Revenue from orders that started in ChatGPT, Perplexity, Gemini and others in the last 30 days.</span></div></li><li><span class="c">3</span><div><b>Your next steps</b><span>The three most useful things to do now, in plain words. Start at the top; each button takes you there or starts the job.</span></div></li><li><span class="c">4</span><div><b>Simple or Detailed</b><span>Detailed adds the charts, area scores and full lists. Soodo remembers your choice.</span></div></li><li><span class="c">5</span><div><b>Help</b><span>Opens this guide for the screen you’re on. You can also press ?.</span></div></li></ol>
+    </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/01-overview.jpg" alt="Overview: readiness 82%, next step card, setup progress and four area tiles" width="1584" height="802"><figcaption>Overview, detailed view</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Catalog readiness</b><span>The average score of your active products, and how much it changed in the last 30 days. 100 means every check that could run has passed.</span></div></li><li><span class="c">2</span><div><b>Next step</b><span>The single most useful thing to do now. Press the button; Soodo takes you there or starts the job.</span></div></li><li><span class="c">3</span><div><b>Setup progress</b><span>Import catalog, check live pages, fix issues. A tick means the step is done.</span></div></li><li><span class="c">4</span><div><b>Readiness by area</b><span>Share of products that pass each area. “Run live checks to measure” means that area waits on step 2. Click a tile to see its fixes.</span></div></li><li><span class="c">5</span><div><b>Scan catalog</b><span>Run a new scan after you change products in Shopify.</span></div></li></ol>
+    </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/04-overview-panels.jpg" alt="Overview panels: readiness over time, products by readiness, top fixes, needs attention, store-wide signals and recent changes" width="1584" height="2150"><figcaption>Further down the Overview</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Readiness over time</b><span>One reading per day, saved after scans, live checks and published changes.</span></div></li><li><span class="c">2</span><div><b>Products by readiness</b><span>How many products are Strong, Good, Fair or Weak, so a good average can’t hide weak products.</span></div></li><li><span class="c">3</span><div><b>Top fixes</b><span>The five fixes with the most impact. “2/3” means two of your three active products are affected.</span></div></li><li><span class="c">4</span><div><b>Needs attention</b><span>Products with the lowest score. Click one to open it.</span></div></li><li><span class="c">5</span><div><b>Store-wide signals</b><span>Policies, contact details and crawler access that apply to every product.</span></div></li><li><span class="c">6</span><div><b>Recent changes</b><span>The latest descriptions and search listings you published or restored.</span></div></li></ol>
+    </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/05-trend-tooltip.jpg" alt="Readiness chart with a tooltip showing date, readiness and open fixes" width="1584" height="495"><figcaption>Hover the chart, or focus it and use the arrow keys</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Daily detail</b><span>The date, the readiness score, how many products were fully ready and how many fixes were open that day.</span></div></li></ol>
+    </div>
 </section>
-
-<section class="wrap chapter" id="ch2" aria-labelledby="ch2-title">
-  <div class="chapter-head"><span class="chapter-num">02</span><span class="chapter-kicker">Steps 1 and 2</span><h2 id="ch2-title">Scan and live checks</h2></div>
+<section class="wrap chapter" id="sales" aria-labelledby="sales-title">
+  <div class="chapter-head"><span class="chapter-num">02</span><span class="chapter-kicker">Results</span><h2 id="sales-title">Sales from AI assistants</h2></div>
+  <p class="why">The clearest sign your work is paying off: orders from shoppers who found you through an AI assistant.</p>
+    <div class="plate">
+      <figure class="shot"><img src="images/18-ai-sales.jpg" alt="Sales from AI assistants: orders, revenue, revenue by assistant and recent orders" width="1584" height="1033"><figcaption>Sales from AI assistants, last 30 days</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Orders</b><span>Orders in the last 30 days whose visit came from an AI assistant, out of all your orders.</span></div></li><li><span class="c">2</span><div><b>Revenue</b><span>What those orders were worth, and their share of all your sales.</span></div></li><li><span class="c">3</span><div><b>By assistant</b><span>Which assistants sent the most revenue.</span></div></li><li><span class="c">4</span><div><b>Recent orders</b><span>The latest AI-referred orders and the product page they landed on.</span></div></li><li><span class="c">5</span><div><b>Refresh</b><span>Updates the figures. Soodo also refreshes them automatically when you open the Overview.</span></div></li></ol>
+    </div><div class="note tip"><b>How it’s counted</b>Shopify records the website each visit came from. Soodo counts orders whose first or last visit came from chatgpt.com, perplexity.ai, gemini.google.com, Copilot, Claude and similar. Some assistants don’t pass this on, so the real number can be higher. Soodo never reads who placed an order.</div>
+</section>
+<section class="wrap chapter" id="scan" aria-labelledby="scan-title">
+  <div class="chapter-head"><span class="chapter-num">03</span><span class="chapter-kicker">Steps 1 and 2</span><h2 id="scan-title">Scan and live checks</h2></div>
   <p class="why">Both jobs run in small batches with a progress bar, so large catalogs never time out. You can pause and continue later; finished work is kept.</p>
-  <div class="plate">
-    <figure class="shot"><img src="images/02-live-progress.jpg" alt="Live page check in progress with a progress bar and a Pause button"><figcaption>A live check in progress</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Progress</b><span>What is running and how much is left.</span></div></li>
-      <li><span class="c">2</span><div><b>Pause</b><span>Stops after the current batch. Press Continue scan or Check live pages to carry on.</span></div></li>
-    </ol>
-  </div>
-  <div class="plate">
-    <figure class="shot"><img src="images/03-toast.jpg" alt="Confirmation message: Live page checks complete"><figcaption>Confirmation at the bottom of the screen</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Done</b><span>Success messages appear here for a few seconds. Errors stay on the page until you act on them.</span></div></li>
-    </ol>
-  </div>
-  <div class="note tip"><b>Good to know</b>Only products on the Online Store sales channel have a public page, so only those get a live check.</div>
+    <div class="plate">
+      <figure class="shot"><img src="images/21-get-started.jpg" alt="First visit: Get started runs the import and the page check in one go" width="1584" height="662"><figcaption>Your first visit</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Get started</b><span>Imports your products, then checks your pages, in one click. It changes nothing in your store.</span></div></li></ol>
+    </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/02-live-progress.jpg" alt="Live page check in progress with a progress bar and a Pause button" width="1584" height="287"><figcaption>A live check in progress</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Progress</b><span>What is running and how much is left.</span></div></li><li><span class="c">2</span><div><b>Pause</b><span>Stops after the current batch. Press Continue scan or Check live pages to carry on.</span></div></li></ol>
+    </div><div class="note tip"><b>Good to know</b>Only products on the Online Store sales channel have a public page, so only those get a live check.</div>
 </section>
-
-<section class="wrap chapter" id="ch3" aria-labelledby="ch3-title">
-  <div class="chapter-head"><span class="chapter-num">03</span><span class="chapter-kicker">Catalog</span><h2 id="ch3-title">Products</h2></div>
+<section class="wrap chapter" id="products" aria-labelledby="products-title">
+  <div class="chapter-head"><span class="chapter-num">04</span><span class="chapter-kicker">Catalog</span><h2 id="products-title">Products</h2></div>
   <p class="why">Every product with its score, its next fix and its live page status. Click anywhere on a row to open the product.</p>
-  <div class="plate">
-    <figure class="shot"><img src="images/06-products.jpg" alt="Products table with filters, search, sorting, readiness, next fix and live page columns"><figcaption>Products</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Filters</b><span>All, Needs fixes, Draft ready and Ready, with counts.</span></div></li>
-      <li><span class="c">2</span><div><b>Search</b><span>By product name, type or category.</span></div></li>
-      <li><span class="c">3</span><div><b>Sort</b><span>Needs attention first is the default. You can also click a column header.</span></div></li>
-      <li><span class="c">4</span><div><b>Readiness</b><span>The product’s score out of 100. Red under 50, amber under 80, green from 80.</span></div></li>
-      <li><span class="c">5</span><div><b>Next fix</b><span>The most important open fix, with its priority and how many more there are.</span></div></li>
-      <li><span class="c">6</span><div><b>Live page</b><span>Passing, Issues, Not checked, or No page if the product isn’t on the Online Store.</span></div></li>
-      <li><span class="c">7</span><div><b>Open a product</b><span>The whole row is clickable.</span></div></li>
-    </ol>
-  </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/06-products.jpg" alt="Products table with filters, search, sorting, readiness, next fix and live page columns" width="1584" height="764"><figcaption>Products</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Filters</b><span>All, Needs fixes, Draft ready and Ready, with counts.</span></div></li><li><span class="c">2</span><div><b>Search</b><span>By product name, type or category.</span></div></li><li><span class="c">3</span><div><b>Sort</b><span>Needs attention first is the default. You can also click a column header.</span></div></li><li><span class="c">4</span><div><b>Readiness</b><span>The product’s score out of 100. Red under 50, amber under 80, green from 80.</span></div></li><li><span class="c">5</span><div><b>Next fix</b><span>The most important open fix, with its priority and how many more there are.</span></div></li><li><span class="c">6</span><div><b>Live page</b><span>Passing, Issues, Not checked, or No page if the product isn’t on the Online Store.</span></div></li><li><span class="c">7</span><div><b>Open a product</b><span>The whole row is clickable.</span></div></li></ol>
+    </div>
 </section>
-
-<section class="wrap chapter" id="ch4" aria-labelledby="ch4-title">
-  <div class="chapter-head"><span class="chapter-num">04</span><span class="chapter-kicker">Product page</span><h2 id="ch4-title">A product’s checks</h2></div>
+<section class="wrap chapter" id="product" aria-labelledby="product-title">
+  <div class="chapter-head"><span class="chapter-num">05</span><span class="chapter-kicker">Product page</span><h2 id="product-title">A product’s checks</h2></div>
   <p class="why">Each product has three tabs: Checks, Specifications and Live page. Checks lists what to fix, grouped by area, with the most important one already open.</p>
-  <div class="plate">
-    <figure class="shot"><img src="images/07-product-checks.jpg" alt="Product page with readiness dial, tabs, an open check with advice, the by-area summary and the live page summary"><figcaption>Summit Shell Jacket, Checks tab</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Product readiness</b><span>This product’s score out of 100.</span></div></li>
-      <li><span class="c">2</span><div><b>Tabs</b><span>The number on Checks is how many fixes are open. Specifications shows how many key facts were found.</span></div></li>
-      <li><span class="c">3</span><div><b>A check</b><span>The problem in one line. Click it to see what to do and the button that takes you there. One check is open at a time.</span></div></li>
-      <li><span class="c">4</span><div><b>By area</b><span>How many checks passed in each area.</span></div></li>
-      <li><span class="c">5</span><div><b>Live page summary</b><span>The result of the last live check, with a link to the details.</span></div></li>
-    </ol>
-  </div>
-  <div class="note tip"><b>Colour key</b>Red square: high priority. Amber: medium. Grey-blue: low. Green: passed. Hollow square: not checked yet.</div>
+    <div class="plate">
+      <figure class="shot"><img src="images/07-product-checks.jpg" alt="Product page with readiness dial, tabs, an open check with advice, the by-area summary and the live page summary" width="1584" height="1373"><figcaption>Summit Shell Jacket, Checks tab</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Product readiness</b><span>This product’s score out of 100.</span></div></li><li><span class="c">2</span><div><b>Tabs</b><span>The number on Checks is how many fixes are open. Specifications shows how many key facts were found.</span></div></li><li><span class="c">3</span><div><b>A check</b><span>The problem in one line. Click it to see what to do and the button that takes you there. One check is open at a time.</span></div></li><li><span class="c">4</span><div><b>By area</b><span>How many checks passed in each area.</span></div></li><li><span class="c">5</span><div><b>Live page summary</b><span>The result of the last live check, with a link to the details.</span></div></li></ol>
+    </div><div class="note tip"><b>Colour key</b>Red square: high priority. Amber: medium. Grey-blue: low. Green: passed. Hollow square: not checked yet.</div>
 </section>
-
-<section class="wrap chapter" id="ch5" aria-labelledby="ch5-title">
-  <div class="chapter-head"><span class="chapter-num">05</span><span class="chapter-kicker">Step 3 · in Soodo</span><h2 id="ch5-title">Adding specifications</h2></div>
+<section class="wrap chapter" id="specs" aria-labelledby="specs-title">
+  <div class="chapter-head"><span class="chapter-num">06</span><span class="chapter-kicker">Step 3 · in Soodo</span><h2 id="specs-title">Adding specifications</h2></div>
   <p class="why">Assistants answer buyers’ questions from what is written on the page. Soodo finds the key facts for each type of product and helps you write the missing ones into the description.</p>
-  <div class="plate">
-    <figure class="shot"><img src="images/08-specifications.jpg" alt="Specifications tab with step tracker, found and missing facts, confirmation and Create description draft button"><figcaption>Specifications tab, three missing facts filled in</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Where you are</b><span>Add verified facts, review the draft, publish.</span></div></li>
-      <li><span class="c">2</span><div><b>Found</b><span>Already known from your product data. The source is shown underneath. These fields are locked; change them in Shopify.</span></div></li>
-      <li><span class="c">3</span><div><b>Missing</b><span>Type the value only if you have verified it. Leave anything you don’t know empty.</span></div></li>
-      <li><span class="c">4</span><div><b>Confirm</b><span>Tick to confirm the values are accurate.</span></div></li>
-      <li><span class="c">5</span><div><b>Create description draft</b><span>Makes a draft. Nothing changes in your store yet.</span></div></li>
-    </ol>
-  </div>
-  <div class="plate">
-    <figure class="shot"><img src="images/09-buyer-questions.jpg" alt="Buyer questions with status badges: stored fact only and missing"><figcaption>Buyer questions on the same tab</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Buyer questions</b><span>What an assistant could answer from your facts. “Stored fact only” means the fact exists in Shopify but may not show on the page, so add it to the description. Soodo never guesses an answer.</span></div></li>
-    </ol>
-  </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/08-specifications.jpg" alt="Specifications tab with step tracker, found and missing facts, confirmation and Create description draft button" width="1584" height="1102"><figcaption>Specifications tab, three missing facts filled in</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Where you are</b><span>Add verified facts, review the draft, publish.</span></div></li><li><span class="c">2</span><div><b>Found</b><span>Already known from your product data. The source is shown underneath. These fields are locked; change them in Shopify.</span></div></li><li><span class="c">3</span><div><b>Missing</b><span>Type the value only if you have verified it. Leave anything you don’t know empty.</span></div></li><li><span class="c">4</span><div><b>Options</b><span>Add a short buyer Q&amp;A built from these facts (on by default), and tick to confirm the values are accurate.</span></div></li><li><span class="c">5</span><div><b>Create description draft</b><span>Makes a draft. Nothing changes in your store yet.</span></div></li></ol>
+    </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/09-buyer-questions.jpg" alt="Buyer questions with status badges" width="1584" height="820"><figcaption>Buyer questions on the same tab</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Buyer questions</b><span>What an assistant could answer from your facts. “Stored fact only” means the fact exists in Shopify but may not show on the page, so add it to the description. Soodo never guesses an answer.</span></div></li></ol>
+    </div>
 </section>
-
-<section class="wrap chapter" id="ch6" aria-labelledby="ch6-title">
-  <div class="chapter-head"><span class="chapter-num">06</span><span class="chapter-kicker">Step 4</span><h2 id="ch6-title">Review and publish</h2></div>
+<section class="wrap chapter" id="listing" aria-labelledby="listing-title">
+  <div class="chapter-head"><span class="chapter-num">07</span><span class="chapter-kicker">Product page</span><h2 id="listing-title">Search listing</h2></div>
+  <p class="why">The title and short description people see on Google, and that AI answers often quote. Soodo suggests one from your product data; you edit and approve it.</p>
+    <div class="plate">
+      <figure class="shot"><img src="images/19-search-listing.jpg" alt="Search listing tab with title and description fields, character counters, a live Google-style preview and the current listing" width="1584" height="1062"><figcaption>Search listing tab</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Title</b><span>Up to 70 characters, so Google doesn’t cut it off. The counter turns red if it’s too long.</span></div></li><li><span class="c">2</span><div><b>Description</b><span>One or two factual sentences. Google usually shows about 160 characters.</span></div></li><li><span class="c">3</span><div><b>Preview</b><span>How the listing will look in search results, updated as you type.</span></div></li><li><span class="c">4</span><div><b>Use suggestion</b><span>Puts back the suggestion built from your product’s title, brand, category, description and verified facts.</span></div></li><li><span class="c">5</span><div><b>Create listing draft</b><span>Makes a draft to review. Nothing changes in your store yet.</span></div></li><li><span class="c">6</span><div><b>On Google now</b><span>Your current listing. Without a custom listing, Google uses the product title and description.</span></div></li></ol>
+    </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/20-listing-review.jpg" alt="Search listing review: now versus proposed, approval and publish" width="1584" height="668"><figcaption>Reviewing a listing draft</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Now and proposed</b><span>Side by side, as they would appear on Google.</span></div></li><li><span class="c">2</span><div><b>Approve and publish</b><span>Tick to approve, then publish. Soodo checks the result, and Change history keeps the previous listing so you can restore it.</span></div></li></ol>
+    </div>
+</section>
+<section class="wrap chapter" id="publish" aria-labelledby="publish-title">
+  <div class="chapter-head"><span class="chapter-num">08</span><span class="chapter-kicker">Step 4</span><h2 id="publish-title">Review and publish</h2></div>
   <p class="why">You always see the exact wording before anything is published. Soodo keeps your existing text and adds one clear specifications list at the end.</p>
-  <div class="plate">
-    <figure class="shot"><img src="images/10-draft-review.jpg" alt="Draft review comparing current and proposed descriptions, with sources, approval checkbox, Publish and Reject buttons"><figcaption>Draft review</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Current</b><span>The description in your store today.</span></div></li>
-      <li><span class="c">2</span><div><b>Proposed</b><span>Your text, plus the specifications list.</span></div></li>
-      <li><span class="c">3</span><div><b>Sources</b><span>Where each value came from: your product data, or you.</span></div></li>
-      <li><span class="c">4</span><div><b>Approve</b><span>Required before publishing.</span></div></li>
-      <li><span class="c">5</span><div><b>Publish</b><span>Soodo re-reads the product, publishes, then reads it back to confirm the change landed. In a real store the button says Publish to Shopify.</span></div></li>
-      <li><span class="c">6</span><div><b>Reject draft</b><span>Discards the draft. Your product is not changed.</span></div></li>
-    </ol>
-  </div>
-  <div class="plate">
-    <figure class="shot"><img src="images/11-published.jpg" alt="Product after publishing: confirmation message and Specifications 5 of 5"><figcaption>After publishing</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Published and verified</b><span>The change is live in Shopify and has been checked.</span></div></li>
-      <li><span class="c">2</span><div><b>All facts found</b><span>The specifications now come from the description itself, and the score goes up.</span></div></li>
-    </ol>
-  </div>
-  <div class="note"><b>If the product changed</b>If someone edits the product in Shopify after the draft was made, Soodo stops and asks you to create a fresh draft. It never overwrites newer edits.</div>
+    <div class="plate">
+      <figure class="shot"><img src="images/10-draft-review.jpg" alt="Draft review comparing current and proposed descriptions, with sources, approval checkbox, Publish and Reject buttons" width="1584" height="1412"><figcaption>Draft review</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Current</b><span>The description in your store today.</span></div></li><li><span class="c">2</span><div><b>Proposed</b><span>Your text, plus the specifications list.</span></div></li><li><span class="c">3</span><div><b>Sources</b><span>Where each value came from: your product data, or you.</span></div></li><li><span class="c">4</span><div><b>Approve</b><span>Required before publishing.</span></div></li><li><span class="c">5</span><div><b>Publish</b><span>Soodo re-reads the product, publishes, then reads it back to confirm the change landed.</span></div></li><li><span class="c">6</span><div><b>Reject draft</b><span>Discards the draft. Your product is not changed.</span></div></li></ol>
+    </div><div class="note"><b>If the product changed</b>If someone edits the product in Shopify after the draft was made, Soodo stops and asks you to create a fresh draft. It never overwrites newer edits.</div>
 </section>
-
-<section class="wrap chapter" id="ch7" aria-labelledby="ch7-title">
-  <div class="chapter-head"><span class="chapter-num">07</span><span class="chapter-kicker">Product page</span><h2 id="ch7-title">Live page</h2></div>
+<section class="wrap chapter" id="live" aria-labelledby="live-title">
+  <div class="chapter-head"><span class="chapter-num">09</span><span class="chapter-kicker">Product page</span><h2 id="live-title">Live page</h2></div>
   <p class="why">What search engines and AI assistants actually see when they open the product page.</p>
-  <div class="plate">
-    <figure class="shot"><img src="images/12-live-page.jpg" alt="Live page results and crawler access list"><figcaption>Basecamp Two Tent, Live page tab</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Page results</b><span>Is the page reachable and indexable, and does its product data match Shopify?</span></div></li>
-      <li><span class="c">2</span><div><b>A problem found</b><span>Here the page has two product markup blocks, usually left by an old app or theme edit. Search engines may ignore conflicting markup.</span></div></li>
-      <li><span class="c">3</span><div><b>Search and assistant crawlers</b><span>Allowed or blocked by your robots.txt. These should be allowed.</span></div></li>
-      <li><span class="c">4</span><div><b>Training crawlers</b><span>Used to train AI models. Blocking them is your choice and doesn’t affect search results.</span></div></li>
-      <li><span class="c">5</span><div><b>Check again</b><span>Re-runs the check after you fix something.</span></div></li>
-    </ol>
-  </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/12-live-page.jpg" alt="Live page results and crawler access list" width="1584" height="1201"><figcaption>Basecamp Two Tent, Live page tab</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Page results</b><span>Is the page reachable and indexable, and does its product data match Shopify?</span></div></li><li><span class="c">2</span><div><b>A problem found</b><span>Here the page has two product markup blocks, usually left by an old app or theme edit. Search engines may ignore conflicting markup.</span></div></li><li><span class="c">3</span><div><b>Search and assistant crawlers</b><span>Allowed or blocked by your robots.txt. These should be allowed.</span></div></li><li><span class="c">4</span><div><b>Training crawlers</b><span>Used to train AI models. Blocking them is your choice and doesn’t affect search results.</span></div></li><li><span class="c">5</span><div><b>Check again</b><span>Re-runs the check after you fix something.</span></div></li></ol>
+    </div>
 </section>
-
-<section class="wrap chapter" id="ch8" aria-labelledby="ch8-title">
-  <div class="chapter-head"><span class="chapter-num">08</span><span class="chapter-kicker">Step 3 · across products</span><h2 id="ch8-title">Fix plan</h2></div>
+<section class="wrap chapter" id="fixes" aria-labelledby="fixes-title">
+  <div class="chapter-head"><span class="chapter-num">10</span><span class="chapter-kicker">Step 3 · across products</span><h2 id="fixes-title">Fix plan</h2></div>
   <p class="why">Every open fix across your active products, ranked by impact. Fix the same issue on several products in one pass.</p>
-  <div class="plate">
-    <figure class="shot"><img src="images/13-fix-plan.jpg" alt="Fix plan with store-wide issue, area and priority filters, and an expanded fix showing how to fix it and the affected products"><figcaption>Fix plan with one fix opened</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Store-wide</b><span>One change in Shopify settings helps every product.</span></div></li>
-      <li><span class="c">2</span><div><b>Area filter</b><span>Show fixes for one area only.</span></div></li>
-      <li><span class="c">3</span><div><b>Priority filter</b><span>Click High, Medium or Low; click again to clear.</span></div></li>
-      <li><span class="c">4</span><div><b>Impact</b><span>How many active products the fix affects.</span></div></li>
-      <li><span class="c">5</span><div><b>How and where</b><span>What to do, and whether it’s done in Soodo, the Shopify product editor or your theme.</span></div></li>
-      <li><span class="c">6</span><div><b>Affected products</b><span>Open takes you to the right tab of that product.</span></div></li>
-    </ol>
-  </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/13-fix-plan.jpg" alt="Fix plan with store-wide issue, area and priority filters, and an expanded fix" width="1584" height="1179"><figcaption>Fix plan with one fix opened</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Store-wide</b><span>One change in Shopify settings helps every product.</span></div></li><li><span class="c">2</span><div><b>Area filter</b><span>Show fixes for one area only.</span></div></li><li><span class="c">3</span><div><b>Priority filter</b><span>Click High, Medium or Low; click again to clear.</span></div></li><li><span class="c">4</span><div><b>Impact</b><span>How many active products the fix affects.</span></div></li><li><span class="c">5</span><div><b>How and where</b><span>What to do, and whether it’s done in Soodo, the Shopify product editor or your theme.</span></div></li><li><span class="c">6</span><div><b>Affected products</b><span>Open takes you to the right tab of that product.</span></div></li></ol>
+    </div>
 </section>
-
-<section class="wrap chapter" id="ch9" aria-labelledby="ch9-title">
-  <div class="chapter-head"><span class="chapter-num">09</span><span class="chapter-kicker">Undo</span><h2 id="ch9-title">Change history</h2></div>
+<section class="wrap chapter" id="history" aria-labelledby="history-title">
+  <div class="chapter-head"><span class="chapter-num">11</span><span class="chapter-kicker">Undo</span><h2 id="history-title">Change history</h2></div>
   <p class="why">Every description Soodo published, with the version it replaced.</p>
-  <div class="plate">
-    <figure class="shot"><img src="images/14-history.jpg" alt="Change history entry with status, saved descriptions and restore controls"><figcaption>Change history</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>When</b><span>Date and time of the change (UTC).</span></div></li>
-      <li><span class="c">2</span><div><b>Status</b><span>Published, restored, or a state that needs checking.</span></div></li>
-      <li><span class="c">3</span><div><b>Saved descriptions</b><span>The version before and the version published, side by side.</span></div></li>
-      <li><span class="c">4</span><div><b>Restore</b><span>Tick and press Restore to put the previous description back. Restore is blocked if the product was edited afterwards, so newer work is never lost.</span></div></li>
-    </ol>
-  </div>
-  <div class="note"><b>“Verify saved result”</b>If the connection drops while publishing, Soodo can’t be sure the change landed. It then blocks further changes to that product and shows Verify saved result. Press it; Soodo reads the product and settles the status.</div>
+    <div class="plate">
+      <figure class="shot"><img src="images/14-history.jpg" alt="Change history entry with status, saved descriptions and restore controls" width="1584" height="1053"><figcaption>Change history</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>When</b><span>Date and time of the change (UTC).</span></div></li><li><span class="c">2</span><div><b>Status</b><span>Published, restored, or a state that needs checking.</span></div></li><li><span class="c">3</span><div><b>Saved descriptions</b><span>The version before and the version published, side by side.</span></div></li><li><span class="c">4</span><div><b>Restore</b><span>Tick and press Restore to put the previous description back. Restore is blocked if the product was edited afterwards, so newer work is never lost.</span></div></li></ol>
+    </div><div class="note"><b>“Verify saved result”</b>If the connection drops while publishing, Soodo can’t be sure the change landed. It blocks further changes to that product and shows Verify saved result. Press it; Soodo reads the product and settles the status.</div>
 </section>
-
-<section class="wrap chapter" id="ch10" aria-labelledby="ch10-title">
-  <div class="chapter-head"><span class="chapter-num">10</span><span class="chapter-kicker">Setup</span><h2 id="ch10-title">Settings and permissions</h2></div>
+<section class="wrap chapter" id="settings" aria-labelledby="settings-title">
+  <div class="chapter-head"><span class="chapter-num">12</span><span class="chapter-kicker">Setup</span><h2 id="settings-title">Settings and permissions</h2></div>
   <p class="why">Choose which specification checklist applies, and see which Shopify permissions Soodo has.</p>
-  <div class="plate">
-    <figure class="shot"><img src="images/15-settings.jpg" alt="Settings: checklist choices, save button, permissions and publishing rules"><figcaption>Settings</figcaption></figure>
-    <ol class="legend">
-      <li><span class="c">1</span><div><b>Specification checklist</b><span>Automatic picks the right facts for each product from its Shopify category. Choose a fixed list if your whole catalog is one type.</span></div></li>
-      <li><span class="c">2</span><div><b>Save checklist</b><span>Applies immediately to every product.</span></div></li>
-      <li><span class="c">3</span><div><b>Permissions</b><span>What Soodo can read and write. A permission marked “Not approved yet” means some checks show as not checked until you approve it.</span></div></li>
-      <li><span class="c">4</span><div><b>Publishing rules</b><span>Approval is always required, your text is kept, and every change can be undone.</span></div></li>
-    </ol>
-  </div>
+    <div class="plate">
+      <figure class="shot"><img src="images/15-settings.jpg" alt="Settings: checklist choices, save button, permissions and publishing rules" width="1584" height="1959"><figcaption>Settings</figcaption></figure>
+      <ol class="legend"><li><span class="c">1</span><div><b>Specification checklist</b><span>Automatic picks the right facts for each product from its Shopify category. Choose a fixed list if your whole catalog is one type.</span></div></li><li><span class="c">2</span><div><b>Save checklist</b><span>Applies immediately to every product.</span></div></li><li><span class="c">3</span><div><b>Permissions</b><span>What Soodo can read and write. A permission marked “Not approved yet” means some checks show as not checked until you approve it.</span></div></li><li><span class="c">4</span><div><b>Publishing rules</b><span>Approval is always required, your text is kept, and every change can be undone.</span></div></li></ol>
+    </div>
 </section>
-
 <section class="wrap chapter" id="faq" aria-labelledby="faq-title">
   <div class="chapter-head"><span class="chapter-num">?</span><span class="chapter-kicker">When something looks wrong</span><h2 id="faq-title">Troubleshooting</h2></div>
-  <div class="faq">
-    <details open>
-      <summary>Publishing shows an error</summary>
-      <div class="a">
-        <p>Before publishing, Soodo re-reads the product from Shopify to make sure nothing changed. If Shopify refuses that read, the publish stops and nothing is changed.</p>
-        <p>The most common cause is a permission that hasn’t been approved yet. Open Soodo from your Shopify admin and accept the permission request, then try again. Settings shows whether each permission is approved.</p>
-        <p>If it still fails, send a screenshot of the error message itself.</p>
-      </div>
-    </details>
-    <details>
-      <summary>“Shopify did not return a public Online Store URL”</summary>
-      <div class="a"><p>The product isn’t available on the Online Store sales channel, so it has no public page. Search engines and assistants can’t see it, and Soodo can’t live-check it. If the product should be for sale, open it in Shopify and make it available on the Online Store channel.</p></div>
-    </details>
-    <details>
-      <summary>Some checks say “Not checked yet”</summary>
-      <div class="a"><p>They depend on a step that hasn’t run. Visibility checks need a live check; category, barcode and price checks need a scan from the current version. Run Scan catalog, then Check live pages.</p></div>
-    </details>
-    <details>
-      <summary>The scan stopped part way (“Partly imported”)</summary>
-      <div class="a"><p>Press Continue scan; finished batches are kept. If it stops with an error, read the message. A permission message means you need to approve the updated permissions first.</p></div>
-    </details>
-    <details>
-      <summary>An area tile shows “—”</summary>
-      <div class="a"><p>No product has had all of that area’s checks run yet. Soodo won’t claim a pass it hasn’t measured. The note under the tile says which step to run.</p></div>
-    </details>
-    <details>
-      <summary>History says “Stopped: product changed”</summary>
-      <div class="a"><p>The description in Shopify changed while Soodo was publishing. Your current content was kept. Review the product and create a fresh draft.</p></div>
-    </details>
-    <details>
-      <summary>Does a score of 100 guarantee I’ll appear in AI answers?</summary>
-      <div class="a"><p>No. Readiness measures what Soodo can verify: that pages are reachable, data is complete and consistent, and facts are written clearly. Those make products easier to find and recommend, but no tool can guarantee a ranking.</p></div>
-    </details>
-  </div>
+  <div class="faq"><details open><summary>Publishing shows an error</summary><div class="a"><p>Before publishing, Soodo re-reads the product from Shopify to make sure nothing changed. If Shopify refuses that read, the publish stops and nothing is changed.</p><p>The most common cause is a permission that hasn’t been approved yet. Open Soodo from your Shopify admin and accept the permission request, then try again. Settings shows whether each permission is approved.</p><p>If it still fails, send a screenshot of the error message itself to your Soodo contact.</p></div></details><details><summary>“Shopify did not return a public Online Store URL”</summary><div class="a"><p>The product isn’t available on the Online Store sales channel, so it has no public page. Search engines and assistants can’t see it, and Soodo can’t live-check it. If the product should be for sale, open it in Shopify and make it available on the Online Store channel.</p></div></details><details><summary>Some checks say “Not checked yet”</summary><div class="a"><p>They depend on a step that hasn’t run. Visibility checks need a live check; category, barcode and price checks need a scan from the current version. Run Scan catalog, then Check live pages.</p></div></details><details><summary>The scan stopped part way (“Partly imported”)</summary><div class="a"><p>Press Continue scan; finished batches are kept. If it stops with an error, read the message. A permission message means you need to approve the updated permissions first.</p></div></details><details><summary>An area tile shows “—”</summary><div class="a"><p>No product has had all of that area’s checks run yet. Soodo won’t claim a pass it hasn’t measured. The note under the tile says which step to run.</p></div></details><details><summary>History says “Stopped: product changed”</summary><div class="a"><p>The description in Shopify changed while Soodo was publishing. Your current content was kept. Review the product and create a fresh draft.</p></div></details><details><summary>Does a score of 100 guarantee I’ll appear in AI answers?</summary><div class="a"><p>No. Readiness measures what Soodo can verify: that pages are reachable, data is complete and consistent, and facts are written clearly. Those make products easier to find and recommend, but no tool can guarantee a ranking.</p></div></details><details><summary>Sales from AI assistants shows “Approve order access”</summary><div class="a"><p>Soodo needs permission to read orders to see where they came from. Open Soodo from your Shopify admin and approve the order permission. Soodo reads only the order number, amount and the website the visit came from, never customer details.</p></div></details><details><summary>Why are AI sales lower than I expected?</summary><div class="a"><p>Some assistants open links without saying where the visit came from, so those orders look like direct visits. The figure shows orders Soodo can confirm, so the real number can be higher.</p></div></details></div>
 </section>
-
 <section class="wrap chapter" id="glossary" aria-labelledby="glossary-title">
   <div class="chapter-head"><span class="chapter-num">A–Z</span><span class="chapter-kicker">Terms used in the app</span><h2 id="glossary-title">Glossary</h2></div>
-  <dl class="glossary">
-    <div><dt>Readiness</dt><dd>A score from 0 to 100. High-priority checks count three times, medium twice, low once. Checks that couldn’t run are left out.</dd></div>
-    <div><dt>Active product</dt><dd>A product with status Active in Shopify. Draft and archived products are left out of the fix plan.</dd></div>
-    <div><dt>Shopify product category</dt><dd>The standard category from Shopify’s product taxonomy, such as Apparel › Coats. Different from the free-text product type.</dd></div>
-    <div><dt>Category attributes</dt><dd>Fields like color, fabric or size that belong to a category. Filled in on the product in Shopify.</dd></div>
-    <div><dt>GTIN / barcode</dt><dd>The manufacturer’s barcode number (UPC, EAN). Lets search engines match the exact item.</dd></div>
-    <div><dt>Structured data</dt><dd>Hidden product markup in the page that machines read for price, stock and identifiers. Your theme usually adds it.</dd></div>
-    <div><dt>robots.txt</dt><dd>A file on your store that tells crawlers which pages they may read. Edited in your theme as robots.txt.liquid.</dd></div>
-    <div><dt>Crawler</dt><dd>A program that reads web pages for a search engine or assistant, such as Googlebot or OAI-SearchBot for ChatGPT search.</dd></div>
-    <div><dt>noindex</dt><dd>A tag asking search engines not to list the page.</dd></div>
-    <div><dt>Canonical link</dt><dd>Tells search engines which address is the main one for a page.</dd></div>
-    <div><dt>Metafield</dt><dd>An extra field stored on a product in Shopify. Your theme may or may not show it.</dd></div>
-    <div><dt>Draft</dt><dd>A proposed description waiting for your approval. Nothing changes until you publish it.</dd></div>
-  </dl>
+  <dl class="glossary"><div><dt>Readiness</dt><dd>A score from 0 to 100. High-priority checks count three times, medium twice, low once. Checks that couldn’t run are left out.</dd></div><div><dt>Active product</dt><dd>A product with status Active in Shopify. Draft and archived products are left out of the fix plan.</dd></div><div><dt>Shopify product category</dt><dd>The standard category from Shopify’s product taxonomy, such as Apparel › Coats. Different from the free-text product type.</dd></div><div><dt>Category attributes</dt><dd>Fields like color, fabric or size that belong to a category. Filled in on the product in Shopify.</dd></div><div><dt>GTIN / barcode</dt><dd>The manufacturer’s barcode number (UPC, EAN). Lets search engines match the exact item.</dd></div><div><dt>Structured data</dt><dd>Hidden product markup in the page that machines read for price, stock and identifiers. Your theme usually adds it.</dd></div><div><dt>robots.txt</dt><dd>A file on your store that tells crawlers which pages they may read. Edited in your theme as robots.txt.liquid.</dd></div><div><dt>Crawler</dt><dd>A program that reads web pages for a search engine or assistant, such as Googlebot or OAI-SearchBot for ChatGPT search.</dd></div><div><dt>noindex</dt><dd>A tag asking search engines not to list the page.</dd></div><div><dt>Canonical link</dt><dd>Tells search engines which address is the main one for a page.</dd></div><div><dt>Metafield</dt><dd>An extra field stored on a product in Shopify. Your theme may or may not show it.</dd></div><div><dt>Draft</dt><dd>A proposed description waiting for your approval. Nothing changes until you publish it.</dd></div></dl>
 </section>
 </main>
-
-<footer class="wrap">Soodo GEO user guide. Screenshots are from the demo store Trail Supply; your store shows your own products. Scanning and checking never change your store, and every published description can be restored.</footer>
+<footer class="wrap">Soodo GEO user guide. Screenshots are from the demo store Trail Supply; your store shows your own products and orders. Scanning and checking never change your store, and every published change can be restored.</footer>
 
 </body>
 </html>

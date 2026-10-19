@@ -17,6 +17,15 @@ import { previewText } from "../core/catalog";
 
 const UNRESOLVED = ["PUBLISHING", "UNCERTAIN", "RESTORING", "RESTORE_UNCERTAIN"];
 
+/** A search listing snapshot as readable text. */
+function listingText(json: string) {
+  try {
+    const listing = JSON.parse(json) as { title?: string; description?: string };
+    return [`Title: ${listing.title || "(product title)"}`, `Description: ${listing.description || "(from product description)"}`].join("\n");
+  } catch {
+    return json;
+  }
+}
 export async function loader({ request }: LoaderFunctionArgs) {
   const { shop } = await context(request);
   const changes = await db.change.findMany({
@@ -25,6 +34,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     take: 100,
     select: {
       id: true,
+      kind: true,
       status: true,
       createdAt: true,
       message: true,
@@ -36,8 +46,8 @@ export async function loader({ request }: LoaderFunctionArgs) {
   return {
     changes: changes.map(({ beforeHtml, afterHtml, ...change }) => ({
       ...change,
-      beforeText: previewText(beforeHtml),
-      afterText: previewText(afterHtml),
+      beforeText: change.kind === "seo" ? listingText(beforeHtml) : previewText(beforeHtml),
+      afterText: change.kind === "seo" ? listingText(afterHtml) : previewText(afterHtml),
     })),
   };
 }
@@ -157,7 +167,8 @@ export default function History() {
                   <AppLink to={`/app/products/${change.product.id}`} className="text-link">
                     <h2 style={{ fontSize: 14 }}>{change.product.title}</h2>
                   </AppLink>
-                  <div style={{ marginTop: 4 }}>
+                  <div style={{ marginTop: 4, display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    <Badge tone="neutral">{change.kind === "seo" ? "Search listing" : "Description"}</Badge>
                     <Badge tone={tone(change.status)}>{change.status.toLowerCase().replace(/_/g, " ")}</Badge>
                   </div>
                   {change.message && <Notice tone="info">{change.message}</Notice>}
@@ -174,7 +185,7 @@ export default function History() {
                       </label>
                       <button className="button compact" disabled={busy}>
                         {pendingId === change.id && <Spinner />}
-                        Restore previous description
+                        {change.kind === "seo" ? "Restore previous listing" : "Restore previous description"}
                       </button>
                     </Form>
                   )}

@@ -8,6 +8,7 @@ import { DEMO_SHOP } from "../core/demo";
 export const OPTIONAL_SCOPES = {
   read_metaobjects: "category attribute values (color, material, size)",
   read_legal_policies: "refund, shipping, privacy and contact policies",
+  read_orders: "sales from AI assistants",
 } as const;
 export const demoEnabled = () => process.env.DEMO_MODE === "true" && process.env.NODE_ENV !== "production";
 export async function context(request: Request) {

@@ -1,8 +1,14 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import db from "../db.server";
 import { type ProductData } from "../core/catalog";
 import { resolveProfile } from "../core/profiles";
 import { sameHtml } from "../core/html";
+import {
+  currentListing,
+  sameListing,
+  validateListing,
+  type Listing,
+} from "../core/listing";
 import { buildDraft, fingerprint } from "./drafts.server";
 import type { CatalogAdapter } from "./shopify-catalog.server";
 import { WriteRejectedError } from "./shopify-catalog.server";
@@ -190,6 +196,46 @@ async function refresh(
   });
   return product;
 }
+/**
+ * What a draft changes. Each kind knows how to fingerprint, read, write and
+ * compare its value; locking, journaling, verification and restore are shared.
+ */
+type Kind = {
+  noun: string;
+  fingerprint: (product: ProductData) => string;
+  read: (product: ProductData) => string;
+  write: (adapter: CatalogAdapter, id: string, value: string) => Promise<void>;
+  same: (a: string, b: string) => boolean;
+};
+export function listingFingerprint(product: ProductData) {
+  return createHash("sha256")
+    .update(JSON.stringify({ id: product.id, ...currentListing(product) }))
+    .digest("hex");
+}
+const KINDS: Record<string, Kind> = {
+  description: {
+    noun: "description",
+    fingerprint,
+    read: (product) => product.descriptionHtml,
+    write: (adapter, id, value) => adapter.writeDescription(id, value),
+    // Shopify may re-serialize HTML, so compare meaning, not characters.
+    same: sameHtml,
+  },
+  seo: {
+    noun: "search listing",
+    fingerprint: listingFingerprint,
+    read: (product) => JSON.stringify(currentListing(product)),
+    write: async (adapter, id, value) => {
+      if (!adapter.writeSeo)
+        throw new WriteRejectedError("Search listings can’t be updated for this store.");
+      await adapter.writeSeo(id, JSON.parse(value) as Listing);
+    },
+    same: (a, b) => sameListing(JSON.parse(a) as Listing, JSON.parse(b) as Listing),
+  },
+};
+const kindOf = (kind: string) => KINDS[kind] ?? KINDS.description;
+const capitalized = (text: string) => text[0].toUpperCase() + text.slice(1);
+
 async function assertResolved(id: string) {
   if (
     await db.change.count({
@@ -205,6 +251,7 @@ export async function createDraft(
   id: string,
   adapter: CatalogAdapter,
   input: Record<string, string>,
+  options: { faq?: boolean } = {},
 ) {
   return withLock(shop, id, async (assertLease) => {
     await assertResolved(id);
@@ -213,15 +260,49 @@ export async function createDraft(
       product.commerce?.category,
       await storeProfileSetting(shop),
     );
-    const draft = buildDraft(product, input, profile);
+    const draft = buildDraft(product, input, profile, options);
     await assertLease();
     return db.$transaction(async (tx) => {
+      // A new description draft replaces only other description drafts.
       await tx.suggestion.updateMany({
-        where: { productId: id, status: "DRAFT" },
+        where: { productId: id, status: "DRAFT", kind: "description" },
         data: { status: "SUPERSEDED" },
       });
       return tx.suggestion.create({
-        data: { productId: id, ...draft, facts: JSON.stringify(draft.facts) },
+        data: { productId: id, kind: "description", ...draft, facts: JSON.stringify(draft.facts) },
+      });
+    });
+  });
+}
+/** A search listing draft from the merchant's edited title and description. */
+export async function createListingDraft(
+  shop: string,
+  id: string,
+  adapter: CatalogAdapter,
+  listing: Listing,
+) {
+  const proposed = validateListing(listing);
+  return withLock(shop, id, async (assertLease) => {
+    await assertResolved(id);
+    const product = await refresh(shop, id, adapter, assertLease);
+    const before = currentListing(product);
+    if (sameListing(before, proposed))
+      throw new Error("This search listing is already live. Change the title or description first.");
+    await assertLease();
+    return db.$transaction(async (tx) => {
+      await tx.suggestion.updateMany({
+        where: { productId: id, status: "DRAFT", kind: "seo" },
+        data: { status: "SUPERSEDED" },
+      });
+      return tx.suggestion.create({
+        data: {
+          productId: id,
+          kind: "seo",
+          fingerprint: listingFingerprint(product),
+          beforeHtml: JSON.stringify(before),
+          afterHtml: JSON.stringify(proposed),
+          facts: "[]",
+        },
       });
     });
   });
@@ -258,9 +339,10 @@ export async function publishDraft(
     if (draft.status !== "DRAFT")
       throw new Error("This draft is no longer pending.");
     await assertResolved(draft.productId);
+    const kind = kindOf(draft.kind);
     const current = await refresh(shop, draft.productId, adapter, assertLease);
     await assertLease();
-    if (fingerprint(current) !== draft.fingerprint) {
+    if (kind.fingerprint(current) !== draft.fingerprint) {
       await db.suggestion.update({
         where: { id: draft.id },
         data: { status: "STALE" },
@@ -278,6 +360,7 @@ export async function publishDraft(
         data: {
           productId: draft.productId,
           suggestionId: draft.id,
+          kind: draft.kind,
           beforeHtml: draft.beforeHtml,
           afterHtml: draft.afterHtml,
         },
@@ -285,7 +368,7 @@ export async function publishDraft(
     });
     await assertLease();
     try {
-      await adapter.writeDescription(current.id, draft.afterHtml);
+      await kind.write(adapter, current.id, draft.afterHtml);
       await assertLease();
       await db.change.update({
         where: { id: change.id },
@@ -314,6 +397,8 @@ async function verifyChangeUnlocked(
     where: { id: changeId, product: { shop } },
   });
   if (!change) throw new Error("Change not found.");
+  const kind = kindOf(change.kind);
+  const noun = kind.noun;
   const restoring = ["RESTORING", "RESTORE_UNCERTAIN"].includes(change.status);
   let product: ProductData;
   try {
@@ -325,20 +410,15 @@ async function verifyChangeUnlocked(
       data: {
         status: restoring ? "RESTORE_UNCERTAIN" : "UNCERTAIN",
         message:
-          "Unable to verify the saved description. Retry verification before making another change.",
+          `Unable to verify the saved ${noun}. Retry verification before making another change.`,
       },
     });
     throw new Error(
-      "Unable to verify the saved description. Open History and retry verification.",
+      `Unable to verify the saved ${noun}. Open History and retry verification.`,
     );
   }
-  // Shopify may re-serialize HTML, so compare meaning, not characters.
-  if (
-    sameHtml(
-      product.descriptionHtml,
-      restoring ? change.beforeHtml : change.afterHtml,
-    )
-  ) {
+  const remote = kind.read(product);
+  if (kind.same(remote, restoring ? change.beforeHtml : change.afterHtml)) {
     await db.$transaction([
       db.change.update({
         where: { id: change.id },
@@ -350,26 +430,21 @@ async function verifyChangeUnlocked(
       }),
     ]);
     return restoring
-      ? "Previous description restored and verified."
-      : "Description published and verified.";
+      ? `Previous ${noun} restored and verified.`
+      : `${capitalized(noun)} published and verified.`;
   }
-  if (
-    sameHtml(
-      product.descriptionHtml,
-      restoring ? change.afterHtml : change.beforeHtml,
-    )
-  ) {
+  if (kind.same(remote, restoring ? change.afterHtml : change.beforeHtml)) {
     if (["PENDING", "UNKNOWN"].includes(change.requestOutcome)) {
       await db.change.update({
         where: { id: change.id },
         data: {
           status: restoring ? "RESTORE_UNCERTAIN" : "UNCERTAIN",
           message:
-            "The request was not acknowledged. The current description is unchanged, but a delayed write cannot be ruled out. Retry verification; publishing remains blocked.",
+            `The request was not acknowledged. The current ${noun} is unchanged, but a delayed write cannot be ruled out. Retry verification; publishing remains blocked.`,
         },
       });
       throw new Error(
-        "The write result is uncertain. The description is currently unchanged. Verify again in History before making another change.",
+        `The write result is uncertain. The ${noun} is currently unchanged. Verify again in History before making another change.`,
       );
     }
     await db.$transaction([
@@ -377,7 +452,7 @@ async function verifyChangeUnlocked(
         where: { id: change.id },
         data: {
           status: restoring ? "PUBLISHED" : "FAILED",
-          message: "The saved description was unchanged. You can retry.",
+          message: `The saved ${noun} was unchanged. You can retry.`,
         },
       }),
       db.suggestion.update({
@@ -385,7 +460,7 @@ async function verifyChangeUnlocked(
         data: { status: restoring ? "PUBLISHED" : "DRAFT" },
       }),
     ]);
-    throw new Error("The description was not changed. You can retry safely.");
+    throw new Error(`The ${noun} was not changed. You can retry safely.`);
   }
   if (["PENDING", "UNKNOWN"].includes(change.requestOutcome)) {
     await db.change.update({
@@ -397,7 +472,7 @@ async function verifyChangeUnlocked(
       },
     });
     throw new Error(
-      "The write result is uncertain and the remote description changed. Verify again in History; further writes remain blocked.",
+      `The write result is uncertain and the remote ${noun} changed. Verify again in History; further writes remain blocked.`,
     );
   }
   await db.$transaction([
@@ -406,7 +481,7 @@ async function verifyChangeUnlocked(
       data: {
         status: "CONFLICT",
         message:
-          "The current description differs from both snapshots. It has been preserved; review the product before drafting again.",
+          `The current ${noun} differs from both snapshots. It has been preserved; review the product before drafting again.`,
       },
     }),
     db.suggestion.update({
@@ -415,7 +490,7 @@ async function verifyChangeUnlocked(
     }),
   ]);
   throw new Error(
-    "The product description differs from both snapshots. Your current content was preserved. Review the product again.",
+    `The product ${noun} differs from both snapshots. Your current content was preserved. Review the product again.`,
   );
 }
 export async function verifyChange(
@@ -450,15 +525,16 @@ export async function restoreChange(
       where: { id: changeId, product: { shop } },
     });
     await assertResolved(change.productId);
+    const kind = kindOf(change.kind);
     if (change.status === "RESTORED")
-      return "This description has already been restored.";
+      return `This ${kind.noun} has already been restored.`;
     if (change.status !== "PUBLISHED")
       throw new Error("Only a verified published change can be restored.");
     const current = await refresh(shop, change.productId, adapter, assertLease);
     await assertLease();
-    if (!sameHtml(current.descriptionHtml, change.afterHtml))
+    if (!kind.same(kind.read(current), change.afterHtml))
       throw new Error(
-        "The description changed after publishing. Restore is blocked to preserve your newer edits.",
+        `The ${kind.noun} changed after publishing. Restore is blocked to preserve your newer edits.`,
       );
     await db.change.update({
       where: { id: change.id },
@@ -466,7 +542,7 @@ export async function restoreChange(
     });
     await assertLease();
     try {
-      await adapter.writeDescription(current.id, change.beforeHtml);
+      await kind.write(adapter, current.id, change.beforeHtml);
       await assertLease();
       await db.change.update({
         where: { id: change.id },

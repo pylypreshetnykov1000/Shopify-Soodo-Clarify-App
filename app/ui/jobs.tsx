@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useFetcher } from "react-router";
 import type { action as scanAction } from "../routes/app.scan";
 import type { action as liveAction } from "../routes/app.live";
+import type { action as ordersAction } from "../routes/app.orders";
 import { Icon, Notice, Spinner, useAppHref } from "./common";
 
 type Step = { ok: boolean; done: boolean; message: string };
@@ -57,6 +58,7 @@ function useBatchJob<D extends Step>(path: string, next: (d: D) => Record<string
 }
 
 const continueScan = () => ({ restart: "false" });
+const continueOrders = () => ({});
 const continueLive = () => ({});
 
 export function useScan(store: { syncStarted: string | null; scanTotal: number | null }) {
@@ -69,6 +71,12 @@ export function useScan(store: { syncStarted: string | null; scanTotal: number |
 }
 export function useLiveChecks() {
   const job = useBatchJob<Awaited<ReturnType<typeof liveAction>>>("/app/live", continueLive);
+  return { ...job, start: () => job.start({}) };
+}
+
+/** Updates "sales from AI assistants" in batches of recent orders. */
+export function useOrdersSync() {
+  const job = useBatchJob<Awaited<ReturnType<typeof ordersAction>>>("/app/orders", continueOrders);
   return { ...job, start: () => job.start({}) };
 }
 

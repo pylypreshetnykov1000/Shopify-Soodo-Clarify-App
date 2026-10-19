@@ -2,6 +2,7 @@ import db from "../db.server";
 import {
   DEMO_ORIGIN,
   DEMO_SHOP,
+  demoOrders,
   demoProducts,
   demoRobots,
   demoStore,
@@ -81,15 +82,39 @@ export function demoAdapter(): CatalogAdapter {
     },
     async page() {
       await seedDemo();
-      const rows = await db.catalogProduct.findMany({
+      let rows = await db.catalogProduct.findMany({
         where: { shop: DEMO_SHOP, deleted: false },
       });
+      // A demo store emptied for a first-run walkthrough gets its products back.
+      if (!rows.length) {
+        await db.catalogProduct.deleteMany({ where: { shop: DEMO_SHOP } });
+        await db.catalogProduct.createMany({
+          data: demoProducts.map((p) => ({ shop: DEMO_SHOP, gid: p.id, title: p.title, payload: JSON.stringify(p) })),
+        });
+        rows = await db.catalogProduct.findMany({ where: { shop: DEMO_SHOP, deleted: false } });
+      }
       return {
         products: rows.map((row) =>
           withCurrentFields(JSON.parse(row.payload) as ProductData),
         ),
         cursor: null,
       };
+    },
+    async orders(since) {
+      return { orders: demoOrders().filter((o) => o.createdAt.slice(0, 10) >= since), cursor: null };
+    },
+    async writeSeo(id, seo) {
+      const row = await db.catalogProduct.findUniqueOrThrow({
+        where: { shop_gid: { shop: DEMO_SHOP, gid: id } },
+      });
+      const product = JSON.parse(row.payload) as ProductData;
+      product.discovery = {
+        ...(product.discovery ?? { vendor: "", onlineStoreUrl: null, seoTitle: null, seoDescription: null }),
+        seoTitle: seo.title,
+        seoDescription: seo.description,
+      };
+      product.updatedAt = new Date().toISOString();
+      await db.catalogProduct.update({ where: { id: row.id }, data: { payload: JSON.stringify(product) } });
     },
     async count() {
       return db.catalogProduct.count({ where: { shop: DEMO_SHOP, deleted: false } });
